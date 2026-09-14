@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Mockup tĩnh cho hệ thống quản lý cho thuê đồ Aura Rental"
+    />
+    <title>Aura Rental — Mockup vận hành</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="login-active">
+    <main class="login-screen" id="login-screen">
+      <section class="login-showcase" aria-label="Giới thiệu Aura Rental">
+        <div class="login-showcase-content">
+          <a class="login-brand" href="#" aria-label="Aura Rental">
+            <span class="brand-mark">A</span>
+            <span><strong>Aura Rental</strong><small>Rental operations</small></span>
+          </a>
+          <div class="login-intro">
+            <span class="login-kicker">VẬN HÀNH GỌN GÀNG, PHỤC VỤ TINH TẾ</span>
+            <h1>Mọi đơn thuê.<br />Một nơi quản lý.</h1>
+            <p>Theo dõi lịch váy, tiền cọc và tiến độ đơn hàng xuyên suốt trong một không gian làm việc.</p>
+          </div>
+        </div>
+        <p class="login-quote">“Mỗi chiếc váy đều có một hành trình. Aura giúp đội ngũ không bỏ lỡ bất kỳ bước nào.”</p>
+      </section>
+
+      <section class="login-panel">
+        <div class="login-card">
+          <div class="login-mobile-brand"><span class="brand-mark">A</span><strong>Aura Rental</strong></div>
+          <div class="login-heading">
+            <span class="secure-label">● KHU VỰC NỘI BỘ</span>
+            <h2>Chào mừng trở lại</h2>
+            <p>Đăng nhập bằng tài khoản được cấp để tiếp tục.</p>
+          </div>
+
+          <form class="login-form" id="login-form">
+            <fieldset class="login-role-fieldset">
+              <legend>Bạn đăng nhập với vai trò</legend>
+              <div class="login-role-options">
+                <button class="login-role active" type="button" data-login-role="staff" aria-pressed="true">
+                  <span class="role-symbol">♙</span>
+                  <span><strong>Staff</strong><small>Xử lý đơn & vận hành</small></span>
+                  <i>✓</i>
+                </button>
+                <button class="login-role" type="button" data-login-role="manager" aria-pressed="false">
+                  <span class="role-symbol">♛</span>
+                  <span><strong>Manager</strong><small>Quản trị & phê duyệt</small></span>
+                  <i>✓</i>
+                </button>
+              </div>
+            </fieldset>
+
+            <label class="login-field">
+              <span>Email công việc</span>
+              <span class="login-input-wrap"><i>✉</i><input id="login-email" type="email" value="staff@demo.aurarental.vn" autocomplete="username" required /></span>
+            </label>
+            <label class="login-field">
+              <span class="login-password-label">Mật khẩu <a href="#" data-action="forgot-password">Quên mật khẩu?</a></span>
+              <span class="login-input-wrap"><i>⌁</i><input id="login-password" type="password" value="demo1234" autocomplete="current-password" minlength="7" required /><button type="button" data-action="toggle-password" aria-label="Hiện mật khẩu">◉</button></span>
+            </label>
+            <label class="remember-login"><input type="checkbox" checked /> <span>Ghi nhớ đăng nhập trên thiết bị này</span></label>
+            <button class="login-submit" type="submit"><span>Đăng nhập</span><b>→</b></button>
+            <div class="demo-notice"><span>i</span><p><strong>Tài khoản demo</strong> — Chọn vai trò, sau đó dùng thông tin đã điền sẵn để xem mockup.</p></div>
+          </form>
+          <p class="login-support">Cần hỗ trợ truy cập? <a href="mailto:manager@aurarental.vn">Liên hệ quản lý</a></p>
+        </div>
+      </section>
+    </main>
+
+    <div class="app-shell" id="app-shell" hidden>
+      <aside class="sidebar" aria-label="Điều hướng chính">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div>
+            <strong>Aura Rental</strong>
+            <span>Quản lý cho thuê</span>
+          </div>
+        </div>
+
+        <nav class="main-nav">
+          <button class="nav-item active" data-view="dashboard">
+            <span class="nav-icon">⌂</span> Tổng quan
+          </button>
+          <button class="nav-item" data-view="schedule">
+            <span class="nav-icon">▦</span> Lịch tồn kho
+          </button>
+          <button class="nav-item" data-view="issue-form">
+            <span class="nav-icon">＋</span> Giữ chỗ
+          </button>
+          <button class="nav-item" data-view="orders">
+            <span class="nav-icon">□</span> Đơn hàng
+            <span class="nav-count">3</span>
+          </button>
+          <button class="nav-item" data-view="returns">
+            <span class="nav-icon">↩</span> Trả đồ
+          </button>
+          <button class="nav-item" data-view="products">
+            <span class="nav-icon">◇</span> Kho sản phẩm
+          </button>
+        </nav>
+
+        <div class="sidebar-divider"></div>
+        <button class="nav-item" data-view="reports"><span class="nav-icon">◔</span> Báo cáo</button>
+        <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Cấu hình</button>
+
+        <div class="sidebar-user">
+          <div class="avatar avatar-staff">ML</div>
+          <div class="user-copy"><strong id="profile-name">Minh Lan</strong><span id="profile-role">Staff vận hành</span></div>
+          <button class="more" data-action="logout" aria-label="Đăng xuất" title="Đăng xuất">↪</button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobile-menu" aria-label="Mở menu">☰</button>
+          <div class="breadcrumb" id="breadcrumb">Tổng quan</div>
+          <div class="topbar-actions">
+            <button class="icon-button notification" id="notification-button" aria-label="Thông báo">♢<span>3</span></button>
+            <button class="date-button" id="today-button">Hôm nay, 14 Thg 9 <span>⌄</span></button>
+          </div>
+        </header>
+        <section id="view-root" class="view-root" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Điều hướng mobile" hidden>
+      <button class="mobile-nav-item active" data-view="dashboard"><span>⌂</span>Hôm nay</button>
+      <button class="mobile-nav-item" data-view="schedule"><span>▦</span>Lịch</button>
+      <button class="mobile-nav-item create" data-view="issue-form"><span>＋</span>Giữ chỗ</button>
+      <button class="mobile-nav-item" data-view="orders"><span>□</span>Đơn hàng</button>
+      <button class="mobile-nav-item" data-view="returns"><span>↩</span>Trả đồ</button>
+    </nav>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"></section>
+    </div>
+    <div class="toast-area" id="toast-area" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

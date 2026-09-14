@@ -1,0 +1,315 @@
+const root = document.querySelector('#view-root')
+const breadcrumb = document.querySelector('#breadcrumb')
+const modalBackdrop = document.querySelector('#modal-backdrop')
+const modal = document.querySelector('#modal')
+const toastArea = document.querySelector('#toast-area')
+const loginScreen = document.querySelector('#login-screen')
+const loginForm = document.querySelector('#login-form')
+const loginEmail = document.querySelector('#login-email')
+const loginPassword = document.querySelector('#login-password')
+const appShell = document.querySelector('#app-shell')
+const mobileNav = document.querySelector('#mobile-nav')
+
+const state = {
+  view: 'dashboard',
+  issueComplete: false,
+  selectedOrder: 'AR-240914-018',
+  hasDamage: false,
+  role: 'staff',
+  scheduleExpanded: false,
+  idVerified: false,
+}
+
+const orders = [
+  { id: 'AR-240914-018', name: 'Ngọc Anh', initials: 'NA', item: 'Afrodille gấm · S', date: '14–17 Thg 9', status: 'Chờ cọc', tone: 'pending', deposit: '500.000đ', staff: 'Minh Lan' },
+  { id: 'AR-240913-014', name: 'Thu Hà', initials: 'TH', item: 'Afrodille trắng · S', date: '14–15 Thg 9', status: 'Đang thuê', tone: 'renting', deposit: '1.550.000đ', staff: 'Minh Lan' },
+  { id: 'AR-240912-009', name: 'Bảo Trâm', initials: 'BT', item: 'Selene satin · M', date: '12–15 Thg 9', status: 'Chờ hoàn', tone: 'refund', deposit: '750.000đ', staff: 'Hạ Vy' },
+  { id: 'AR-240911-006', name: 'Lan Phương', initials: 'LP', item: 'Afrodille gấm · L', date: '11–14 Thg 9', status: 'Đã xác nhận', tone: 'confirmed', deposit: '600.000đ', staff: 'Minh Lan' },
+]
+
+const labels = {
+  dashboard: 'Hôm nay', schedule: 'Tìm đồ trống', 'issue-form': 'Giữ chỗ', orders: 'Đơn hàng', returns: 'Trả đồ', products: 'Kho sản phẩm', reports: 'Báo cáo', settings: 'Cấu hình', 'order-detail': 'Chi tiết đơn',
+}
+
+function badge(text, tone) { return `<span class="badge ${tone}">${text}</span>` }
+function avatar(initials, type = 'customer') { return `<span class="avatar tiny avatar-${type}">${initials}</span>` }
+function money(value) { return `<strong>${value}</strong>` }
+
+function pageHeader(title, description, actions = '') {
+  return `<div class="page-header"><div><h1>${title}</h1><p>${description}</p></div><div class="header-actions">${actions}</div></div>`
+}
+
+function ordersTable(items = orders) {
+  return `<div class="table-scroll"><table class="orders-table"><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Sản phẩm</th><th>Lịch thuê</th><th>Trạng thái</th><th></th></tr></thead><tbody>${items.map(order => `
+    <tr data-order="${order.id}">
+      <td><span class="order-code">${order.id}</span></td>
+      <td><div class="customer-cell">${avatar(order.initials)}<span>${order.name}</span></div></td>
+      <td>${order.item}</td><td>${order.date}</td><td>${badge(order.status, order.tone)}</td>
+      <td><button class="inline-link" data-order="${order.id}">Xem <span class="mobile-only">›</span></button></td>
+    </tr>`).join('')}</tbody></table></div>`
+}
+
+function dashboardView() {
+  const manager = state.role === 'manager'
+  const name = manager ? 'Quỳnh Anh' : 'Minh Lan'
+  const description = manager ? 'Thứ Bảy, 14 tháng 9 · Có 2 yêu cầu hoàn tiền và 3 thay đổi cần bạn duyệt.' : 'Thứ Bảy, 14 tháng 9 · Đây là những việc cần ưu tiên hôm nay.'
+  const actions = manager ? `<button class="button secondary" data-view="reports">◔ Xem báo cáo</button><button class="button" data-view="returns">Duyệt hoàn tiền</button>` : `<button class="button secondary" data-view="schedule">▦ Xem lịch</button><button class="button" data-view="issue-form">＋ Cấp mã & form</button>`
+  return `${pageHeader(`Chào buổi sáng, ${name}`, description, actions)}
+  <div class="alert-strip"><span>◷</span><span><strong>2 hold sắp hết hạn</strong> trong 30 phút tới. Hãy nhắc khách hoàn tất form để giữ lịch.</span><button data-view="schedule">Xem hold</button></div>
+  <div class="grid stats-grid">
+    <article class="card stat-card"><span class="stat-label">Đơn cần xử lý hôm nay</span><div class="stat-number">08</div><span class="stat-detail"><b class="attention">● 3</b> đơn đang chờ cọc</span></article>
+    <article class="card stat-card"><span class="stat-label">Lịch giao / nhận</span><div class="stat-number">06</div><span class="stat-detail"><b class="up">↑ 2</b> so với hôm qua</span></article>
+    <article class="card stat-card"><span class="stat-label">Tiền cần hoàn</span><div class="stat-number">1.250.000đ</div><span class="stat-detail"><b class="attention">● 2</b> đơn chờ manager duyệt</span></article>
+    <article class="card stat-card"><span class="stat-label">Tỷ lệ đồ đang bận</span><div class="stat-number">67%</div><span class="stat-detail"><b class="up">↑ 8%</b> so với tuần trước</span></article>
+  </div>
+  <div class="grid two-column" style="margin-top:16px">
+    <section class="card"><div class="card-heading"><h2>Việc cần làm hôm nay</h2><a href="#" data-view="orders">Xem tất cả</a></div><div class="task-list">
+      <div class="task"><i class="task-dot"></i><div class="task-copy"><strong>Xác nhận cọc còn lại — Ngọc Anh</strong><span>AR-240914-018 · Afrodille gấm S</span></div><span class="task-time">Trước 11:30</span></div>
+      <div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>Giao đồ cho Thu Hà</strong><span>AR-240913-014 · Tài xế đến lấy lúc 13:00</span></div><span class="task-time">13:00</span></div>
+      <div class="task"><i class="task-dot green"></i><div class="task-copy"><strong>Nhận trả & kiểm tra Selene satin</strong><span>AR-240912-009 · Cần gửi đề nghị hoàn</span></div><span class="task-time">16:30</span></div>
+      <div class="task"><i class="task-dot"></i><div class="task-copy"><strong>Hold AF-GAM-S-02 sắp hết hạn</strong><span>Khách chưa gửi form OTP</span></div><span class="task-time">18:10</span></div>
+    </div></section>
+    <section class="card"><div class="card-heading"><h2>Lịch tuần này</h2><a href="#" data-view="schedule">Mở lịch</a></div><div class="week-labels"><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span></div><div class="mini-calendar">${[9,10,11,12,13,14,15].map(day => `<span class="mini-day ${day === 14 ? 'today' : ''} ${[11,12,15].includes(day) ? 'rental' : ''}">${day}</span>`).join('')}</div><div class="card-body"><div class="calendar-legend"><span><i class="legend-dot booked"></i>Đang thuê</span><span><i class="legend-dot hold"></i>Giữ slot</span><span><i class="legend-dot clean"></i>Vệ sinh</span></div></div></section>
+  </div>
+  <section class="card" style="margin-top:16px"><div class="card-heading"><h2>Đơn mới từ form khách</h2><a href="#" data-view="orders">Xem tất cả đơn</a></div>${ordersTable(orders.slice(0, 3))}</section>`
+}
+
+function scheduleView() {
+  const days = [['T2','09'],['T3','10'],['T4','11'],['T5','12'],['T6','13'],['T7','14'],['CN','15']]
+  const product = (name, code, tone = '') => `<div class="cal-product"><span class="product-thumb ${tone}">♧</span><div class="product-name"><strong>${name}</strong><span>${code}</span></div></div>`
+  const cell = (text = '', type = '') => `<div class="cal-cell ${type}">${text ? `<span class="cell-text">${text}</span>` : ''}</div>`
+  return `${pageHeader('Lịch tồn kho', 'Theo dõi lịch bận, giữ slot và thời gian vệ sinh của từng mã đồ.', `<button class="button secondary">‹ Tuần trước</button><button class="button secondary">Tuần sau ›</button><button class="button" data-view="issue-form">＋ Cấp mã</button>`)}
+  <section class="card"><div class="card-body" style="padding-top:19px"><div class="schedule-toolbar"><div class="week-switcher"><button class="button secondary small">‹</button><span class="week-range">09 – 15 Tháng 9, 2024</span><button class="button secondary small">›</button></div><div class="segmented" style="width:190px"><button class="active">Tuần</button><button>Tháng</button></div></div><div class="calendar-wrap"><div class="rental-calendar">
+    <div class="cal-head">Sản phẩm / mã</div>${days.map(([d,n]) => `<div class="cal-head ${n === '14' ? 'today-head' : ''}"><span>${d}</span><strong>${n}</strong></div>`).join('')}
+    ${product('Afrodille gấm · S', 'AF-GAM-S-01')}${cell()}${cell('Thu Hà','booked')}${cell('Thu Hà','booked')}${cell('Thu Hà','booked')}${cell('Vệ sinh','clean')}${cell()}${cell()}
+    ${product('Afrodille gấm · S', 'AF-GAM-S-02')}${cell()}${cell()}${cell()}${cell()}${cell('Ngọc Anh','hold')}${cell('Ngọc Anh','hold')}${cell()}
+    ${product('Afrodille gấm · L', 'AF-GAM-L-01', 'dark')}${cell('Lan Phương','booked')}${cell('Lan Phương','booked')}${cell('Lan Phương','booked')}${cell('Vệ sinh','clean')}${cell()}${cell()}${cell()}
+    ${product('Afrodille trắng · S', 'AF-TRA-S-01', 'blue')}${cell()}${cell()}${cell()}${cell()}${cell('Mai Vy','booked')}${cell('Mai Vy','booked')}${cell('Vệ sinh','clean')}
+    ${product('Selene satin · M', 'SE-SAT-M-03')}${cell('Bảo Trâm','booked')}${cell('Bảo Trâm','booked')}${cell('Bảo Trâm','booked')}${cell('Vệ sinh','clean')}${cell()}${cell()}${cell()}
+  </div></div><div class="calendar-legend"><span><i class="legend-dot booked"></i>Đơn đã xác nhận / đang thuê</span><span><i class="legend-dot hold"></i>Đã giữ slot, chờ khách gửi form</span><span><i class="legend-dot clean"></i>Không thể cho thuê trong thời gian vệ sinh</span></div></div></section>
+  <div class="grid three-column" style="margin-top:16px"><article class="card"><div class="card-heading"><h3>Hướng dẫn thao tác</h3></div><div class="card-body"><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.65">Chọn chính xác mã đồ trống trước khi gửi form. Hold chỉ khóa lịch tạm và sẽ tự hết hạn.</p></div></article><article class="card"><div class="card-heading"><h3>AF-GAM-S-02</h3>${badge('Hold · 01:42:18', 'hold')}</div><div class="card-body"><p style="margin:0 0 12px;color:var(--muted);font-size:12px">Ngọc Anh · 14–17 Thg 9</p><button class="button secondary small" data-view="issue-form">Mở thông tin cấp mã</button></div></article><article class="card"><div class="card-heading"><h3>Cảnh báo xung đột</h3></div><div class="card-body"><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.65">Không có xung đột. Hệ thống sẽ kiểm tra lại một lần nữa khi khách gửi form.</p></div></article></div>`
+}
+
+function scheduleScaleView() {
+  const stockRow = (name, meta, available, renting, hold, cleaning, open = false) => `<div class="stock-summary-row ${open ? 'expanded' : ''}">
+    <div class="stock-summary-name"><span class="product-thumb">♧</span><div><strong>${name}</strong><span>${meta}</span></div></div>
+    <div class="availability-numbers"><span><b>${available}</b> trống</span><span><b>${renting}</b> thuê</span><span><b>${hold}</b> hold</span><span><b>${cleaning}</b> vệ sinh</span></div>
+    <button class="button secondary small" data-action="toggle-schedule-details">${open ? 'Thu gọn' : 'Xem mã'}</button>
+  </div>`
+  const timelineRow = (code, name, cells) => `<div class="asset-timeline-row"><div class="asset-meta"><strong>${code}</strong><span>${name}</span></div><div class="asset-days">${cells.map(cell => `<span class="asset-day ${cell[1] || ''}">${cell[0] || ''}</span>`).join('')}</div></div>`
+  return `${pageHeader('Lịch tồn kho', 'Tra cứu mã trống trước; chỉ mở timeline cho mẫu hoặc mã đang cần thao tác.', `<button class="button secondary" data-action="show-operations">◷ Việc hôm nay</button><button class="button" data-view="issue-form">＋ Cấp mã & form</button>`)}
+  <section class="availability-finder card"><div class="finder-heading"><div><span class="finder-kicker">TRA CỨU AVAILABILITY</span><h2>Tìm mã trống cho khách</h2><p>Không tải toàn bộ kho. Kết quả chỉ trả về mã có thể thuê trong khoảng thời gian chọn.</p></div><span class="finder-count">1.284 mã đang hoạt động</span></div><div class="finder-controls"><div class="finder-field finder-search"><label>Tên mẫu hoặc mã đồ</label><input class="text-input" value="Afrodille gấm" /></div><div class="finder-field"><label>Size</label><select class="text-input"><option>Size S</option><option>Size L</option></select></div><div class="finder-field"><label>Nhận đồ</label><input class="text-input" value="14/09 · 14:00" /></div><div class="finder-field"><label>Trả đồ</label><input class="text-input" value="17/09 · 14:00" /></div><button class="button finder-button" data-action="search-availability">Tìm mã trống</button></div><div class="quick-filters"><button class="quick-filter active">Tất cả kho</button><button class="quick-filter">Chỉ mã trống</button><button class="quick-filter">Có hoạt động hôm nay <b>18</b></button><button class="quick-filter">Hold sắp hết hạn <b>2</b></button><button class="quick-filter">Đang vệ sinh <b>7</b></button></div></section>
+  <section class="card availability-results"><div class="card-heading"><div><h2>Kết quả: Afrodille gấm · Size S</h2><p style="margin:4px 0 0;color:var(--muted);font-size:11px">Có 12 mã trống toàn bộ 14:00, 14/09 → 14:00, 17/09</p></div><button class="inline-link">Xem 12 mã</button></div><div class="available-asset-list"><div class="available-asset"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-03</strong><span>Trống cả kỳ thuê · Lần vệ sinh gần nhất: 12/09</span></div>${badge('Có thể chọn', 'available')}<button class="button small" data-action="select-asset">Chọn mã</button></div><div class="available-asset"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-05</strong><span>Trống cả kỳ thuê · Lần vệ sinh gần nhất: 10/09</span></div>${badge('Có thể chọn', 'available')}<button class="button small" data-action="select-asset">Chọn mã</button></div><div class="available-asset"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-09</strong><span>Trống cả kỳ thuê · Lần vệ sinh gần nhất: 13/09</span></div>${badge('Có thể chọn', 'available')}<button class="button small" data-action="select-asset">Chọn mã</button></div></div><div class="result-footer"><span>Không hiện các mã bận, hold hoặc cleaning để giảm nhiễu.</span><button class="inline-link">Xem các mã không khả dụng</button></div></section>
+  <section class="card stock-summary"><div class="card-heading"><div><h2>Tổng quan kho theo mẫu / size</h2><p style="margin:4px 0 0;color:var(--muted);font-size:11px">Mặc định hiển thị aggregate. Mở một nhóm để xem timeline của các mã có hoạt động.</p></div><div class="segmented compact"><button class="active">Theo mẫu / size</button><button>Theo mã đồ</button></div></div><div class="stock-summary-head"><span>Mẫu / size</span><span>Tình trạng hiện tại</span><span></span></div>${stockRow('Afrodille gấm · Size S', '19 mã vật lý', '12', '4', '1', '2', state.scheduleExpanded)}${state.scheduleExpanded ? `<div class="expanded-timeline"><div class="timeline-hint"><span>Chỉ hiện 3/19 mã đang có lịch trong tuần này</span><button class="inline-link" data-action="open-all-assets">Xem tất cả mã</button></div><div class="asset-timeline-head"><span>Mã đồ</span><div>${['T2 09','T3 10','T4 11','T5 12','T6 13','T7 14','CN 15'].map(day => `<span>${day}</span>`).join('')}</div></div>${timelineRow('AF-GAM-S-01','Đang thuê · Thu Hà',[[''],['Thu Hà','booked'],['Thu Hà','booked'],['Thu Hà','booked'],['Vệ sinh','clean'],[''],['']])}${timelineRow('AF-GAM-S-02','Hold · Ngọc Anh',[[''],[''],[''],[''],['Ngọc Anh','hold'],['Ngọc Anh','hold'],['']])}${timelineRow('AF-GAM-S-06','Đang vệ sinh',[['Vệ sinh','clean'],[''],[''],[''],[''],[''],['']])}</div>` : ''}${stockRow('Afrodille gấm · Size L', '12 mã vật lý', '8', '3', '0', '1')}${stockRow('Afrodille trắng · Size S', '8 mã vật lý', '5', '2', '1', '0')}${stockRow('Selene satin · Size M', '17 mã vật lý', '10', '5', '0', '2')}</section>
+  <div class="grid three-column" style="margin-top:16px"><article class="card"><div class="card-heading"><h3>Lịch vận hành hôm nay</h3>${badge('18 việc', 'pending')}</div><div class="card-body"><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.65">Danh sách riêng cho giao, nhận, cleaning và hold sắp hết hạn — không lẫn với toàn bộ kho.</p><button class="inline-link" style="margin-top:12px" data-action="show-operations">Mở danh sách việc hôm nay</button></div></article><article class="card"><div class="card-heading"><h3>Quy tắc hiển thị</h3></div><div class="card-body"><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.65">Lịch tháng chỉ hiển thị số lượng theo mẫu/size. Timeline từng mã chỉ mở sau khi người dùng lọc.</p></div></article><article class="card"><div class="card-heading"><h3>Hiệu năng</h3></div><div class="card-body"><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.65">Khi build thật: search server-side, cursor pagination và virtual scroll cho nhóm nhiều mã.</p></div></article></div>`
+}
+
+function issueFormView() {
+  if (state.issueComplete) return issueCompleteView()
+  return `${pageHeader('Cấp mã & form cho khách', 'Staff khóa lịch tạm, cấp mã đồ và link form. Đơn sẽ do hệ thống tự tạo khi khách submit.', `<button class="button secondary" data-view="schedule">← Quay lại lịch</button>`)}
+  <section class="card form-card"><div class="form-section"><div class="stepper"><div class="step done"><span class="step-number">✓</span> Kiểm tra lịch</div><div class="step active"><span class="step-number">2</span> Cấp mã & form</div><div class="step"><span class="step-number">3</span> Khách tự gửi form</div><div class="step"><span class="step-number">4</span> Hệ thống tạo đơn</div></div><h2>Thông tin slot đã giữ</h2><p>Thông tin này chỉ để cấp mã/form, không tạo đơn thủ công.</p><div class="form-grid"><div class="field"><label>Khách hàng</label><input class="text-input" value="Ngọc Anh · 090 812 34 56" /></div><div class="field"><label>Thời gian thuê</label><input class="text-input" value="14:00, 14/09 → 14:00, 17/09" /></div></div></div>
+  <div class="form-section"><h2>Mã đồ gửi cho khách</h2><p>Hệ thống chỉ nhận các mã dưới đây trong form OTP, giúp tránh khách điền sai hoặc spam.</p><div class="choice-list"><div class="product-chip"><div class="chip-left"><span class="product-thumb">♧</span><div><strong>Afrodille gấm · Size S</strong><span>Mã vật lý: AF-GAM-S-02 · đang được hold</span></div></div>${badge('Còn trống', 'available')}</div><div class="product-chip"><div class="chip-left"><span class="product-thumb blue">⌁</span><div><strong>Khuyên ngọc trai</strong><span>Mã phụ kiện: ACC-PEARL-08</span></div></div>${badge('Còn trống', 'available')}</div></div></div>
+  <div class="form-section"><div class="form-grid"><div><h2>Gói cọc khách chọn</h2><p>Giá thuê sẽ được khấu trừ trực tiếp từ cọc khi khách trả đồ.</p><div class="choice-list"><label class="choice selected"><input type="radio" checked name="deposit" /><span><strong>Cọc 50% + CCCD</strong><span>Staff kiểm tra CCCD qua Instagram trước khi xác nhận đơn; hệ thống không lưu CCCD.</span></span></label><label class="choice"><input type="radio" name="deposit" /><span><strong>Cọc 100%</strong><span>Không yêu cầu CCCD.</span></span></label></div></div><div class="money-summary"><div class="summary-line"><span>Giá trị váy</span>${money('1.200.000đ')}</div><div class="summary-line"><span>Cọc mục tiêu (50%)</span>${money('600.000đ')}</div><div class="summary-line"><span>Đã giữ slot</span>${money('− 100.000đ')}</div><div class="summary-line total"><span>Cọc còn lại cần thu</span>${money('500.000đ')}</div></div></div></div>
+  <div class="form-actions"><span>Hold AF-GAM-S-02 hết hạn lúc 18:10 hôm nay.</span><button class="button" data-action="generate-code">Tạo OTP & link form →</button></div></section>`
+}
+
+function issueCompleteView() {
+  return `${pageHeader('Đã sẵn sàng gửi form', 'OTP và link được khóa theo hold. Khách tự điền form; hệ thống sẽ tự tạo đơn sau khi xác thực.', `<button class="button secondary" data-action="restart-issue">＋ Cấp form khác</button>`)}
+  <section class="card form-card"><div class="code-result"><div><span class="success-icon">✓</span><h2>Đã tạo link form cho Ngọc Anh</h2><p>Gửi phần bên dưới cho khách qua Inbox. Mã và OTP chỉ dùng được một lần trước 18:10 hôm nay.</p><div class="code-box"><div class="code-row"><span>Mã váy</span><strong>AF-GAM-S-02</strong></div><div class="code-row"><span>Mã phụ kiện</span><strong>ACC-PEARL-08</strong></div><div class="code-row"><span>OTP</span><strong>482 917</strong></div><div class="code-row"><span>Tiền cọc còn lại</span><strong>500.000đ</strong></div></div><div class="link-box"><span>aurarental.vn/form/hold/6H82AQ</span><button class="inline-link" data-action="copy-link">Sao chép</button></div><div style="display:flex;gap:8px;margin-top:14px"><button class="button" data-action="copy-link">Sao chép nội dung gửi khách</button><button class="button secondary" data-action="preview-form">Xem form khách</button></div></div><div><div class="qr-placeholder" aria-label="QR code mockup"></div><p style="text-align:center;margin-top:9px">QR form · mockup</p></div></div>
+  <div class="form-section" style="background:#fffcfa"><h2>Điều gì xảy ra tiếp theo?</h2><div class="grid three-column"><div><strong style="font-size:12px">1. Khách tự điền</strong><p style="color:var(--muted);font-size:11px;line-height:1.55">Thông tin liên hệ, lịch thuê và mã đồ. Không tải CCCD lên form.</p></div><div><strong style="font-size:12px">2. Hệ thống kiểm tra</strong><p style="color:var(--muted);font-size:11px;line-height:1.55">OTP, mã đồ, reservation và availability được kiểm tra trong một lần submit.</p></div><div><strong style="font-size:12px">3. Staff xác nhận CCCD</strong><p style="color:var(--muted);font-size:11px;line-height:1.55">Nếu dùng gói 50%, staff kiểm tra CCCD qua Instagram rồi tick xác nhận.</p></div></div></div></section>`
+}
+
+function ordersView() {
+  return `${pageHeader('Đơn hàng', 'Danh sách đơn được hệ thống tự tạo từ form khách gửi.', `<button class="button secondary" data-view="schedule">▦ Lịch tồn kho</button><button class="button" data-view="issue-form">＋ Cấp mã & form</button>`)}
+  <div class="filter-row"><input class="search-input" placeholder="Tìm mã đơn, khách hàng, mã váy..." /><select class="select-input"><option>Tất cả trạng thái</option><option>Chờ cọc</option><option>Đang thuê</option><option>Chờ hoàn</option></select><select class="select-input"><option>14 Thg 9</option><option>Tuần này</option></select><span class="filter-spacer"></span><button class="button secondary small">⇩ Xuất file</button></div>
+  <section class="card">${ordersTable()}</section>
+  <p style="margin:12px 2px;color:var(--muted);font-size:11px">Mẹo: Bấm vào đơn để xem timeline, tiền cọc và các bước staff cần xử lý tiếp theo.</p>`
+}
+
+function orderDetailView() {
+  const order = orders.find(item => item.id === state.selectedOrder) || orders[0]
+  return `${pageHeader(`Đơn ${order.id}`, 'Được hệ thống tạo lúc 09:42 sau khi khách Ngọc Anh gửi form OTP.', `<button class="button secondary" data-view="orders">← Danh sách đơn</button><button class="button" data-action="confirm-deposit">✓ Xác nhận cọc 500.000đ</button>`)}
+  <div class="detail-layout"><div class="grid"><section class="card"><div class="card-heading"><div class="detail-title">${avatar(order.initials)}<div><h1>${order.name}</h1><p>090 812 34 56 · Khách mới</p></div></div>${badge(order.status, order.tone)}</div><div class="card-body"><div class="info-list"><div class="info-line"><span>Thời gian thuê</span><strong>14:00, 14/09 → 14:00, 17/09</strong></div><div class="info-line"><span>Giao / nhận</span><strong>Ship 2 chiều · Quận 3, TP.HCM</strong></div><div class="info-line"><span>Staff phụ trách</span><strong>Minh Lan</strong></div></div></div></section>
+  <section class="card"><div class="card-heading"><h2>Sản phẩm khách đã xác nhận</h2><button class="inline-link">Xem lịch</button></div><div class="card-body"><div class="product-row"><span class="product-thumb">♧</span><div><strong>Afrodille gấm · Size S</strong><span>AF-GAM-S-02 · 84 × 64–66 × 88</span></div><div class="price">320.000đ<br/><span>Gói 3 ngày</span></div></div><div class="product-row"><span class="product-thumb blue">⌁</span><div><strong>Khuyên ngọc trai</strong><span>ACC-PEARL-08</span></div><div class="price">Miễn phí<br/><span>Đi kèm váy</span></div></div></div></section>
+  <section class="card"><div class="card-heading"><h2>Timeline đơn hàng</h2></div><div class="card-body"><div class="timeline"><div class="timeline-item"><i class="timeline-dot"></i><strong>Khách gửi form OTP thành công</strong><span>09:42 · Hệ thống kiểm tra mã, hold và lịch trống</span></div><div class="timeline-item"><i class="timeline-dot"></i><strong>Đơn được tạo tự động</strong><span>09:42 · Hold chuyển thành lịch thuê đã khóa</span></div><div class="timeline-item"><i class="timeline-dot pending"></i><strong>Chờ xác nhận cọc còn lại</strong><span>Cần nhận 500.000đ trước giờ giao đồ</span></div></div></div></section></div>
+  <aside class="grid"><section class="card"><div class="card-heading"><h2>Cọc & thanh toán</h2></div><div class="card-body"><div class="money-summary"><div class="summary-line"><span>Cọc mục tiêu (50%)</span>${money('600.000đ')}</div><div class="summary-line"><span>Đã nhận giữ slot</span>${money('100.000đ')}</div><div class="summary-line total"><span>Còn cần nhận</span>${money('500.000đ')}</div></div><div style="margin-top:14px" class="payment-progress"><span></span><i></i></div><div class="progress-caption"><span>Đã nhận 100.000đ</span><span>17%</span></div><button class="button full" style="margin-top:16px" data-action="confirm-deposit">Xác nhận đã nhận 500.000đ</button><p style="margin:10px 0 0;color:var(--muted);font-size:10px;line-height:1.5">Phí thuê 320.000đ sẽ được khấu trừ từ tiền cọc khi khách trả đồ.</p></div></section><section class="card"><div class="card-heading"><h2>Thông tin form</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Gói cọc</span><strong>50% + CCCD</strong></div><div class="info-line"><span>CCCD</span><strong style="color:var(--green)">Đã tải lên ✓</strong></div><div class="info-line"><span>OTP</span><strong>Đã sử dụng</strong></div></div><button class="button secondary full" style="margin-top:13px">Xem ảnh CCCD</button></div></section></aside></div>`
+}
+
+function orderDetailWithIdentityView() {
+  const verification = state.idVerified
+    ? `<div class="info-line"><span>CCCD qua Instagram</span><strong style="color:var(--green)">Đã staff xác nhận ✓</strong></div><div class="info-line"><span>Người xác nhận</span><strong>Minh Lan · 10:20</strong></div>`
+    : `<div class="info-line"><span>CCCD qua Instagram</span><strong style="color:var(--gold)">Cần staff kiểm tra</strong></div>`
+  const verificationAction = state.idVerified
+    ? `<div class="form-message" style="color:#28654f;background:var(--green-pale)">Hệ thống không lưu ảnh hoặc số CCCD.</div>`
+    : `<button class="button secondary full" style="margin-top:13px" data-action="verify-identity">✓ Đã kiểm tra CCCD qua Instagram</button><p style="margin:9px 0 0;color:var(--muted);font-size:10px;line-height:1.45">Không tải ảnh hoặc nhập số CCCD vào hệ thống.</p>`
+  return orderDetailView().replace(
+    /<div class="info-line"><span>CCCD<\/span><strong style="color:var\(--green\)">Đã tải lên ✓<\/strong><\/div><div class="info-line"><span>OTP<\/span><strong>Đã sử dụng<\/strong><\/div><\/div><button class="button secondary full" style="margin-top:13px">Xem ảnh CCCD<\/button>/,
+    `${verification}<div class="info-line"><span>OTP</span><strong>Đã sử dụng</strong></div></div>${verificationAction}`,
+  )
+}
+
+function returnsView() {
+  const fee = state.hasDamage ? '120.000đ' : '0đ'
+  const refund = state.hasDamage ? '310.000đ' : '430.000đ'
+  const refundAction = state.role === 'manager' ? 'Duyệt & xác nhận hoàn tiền' : 'Gửi manager duyệt hoàn'
+  return `${pageHeader('Nhận trả & hoàn tiền', 'Kiểm tra đồ, ghi nhận hư hại nếu có. Manager sẽ duyệt trước khi hoàn tiền.', `<button class="button secondary" data-view="orders">Xem đơn hàng</button>`)}
+  <div class="alert-strip"><span>ⓘ</span><span><strong>Quy tắc hoàn tiền:</strong> tổng cọc đã nhận − phí thuê − phí xử lý hư hại. Hệ thống không cho hoàn âm.</span></div>
+  <div class="return-layout"><section class="card"><div class="card-heading"><div><h2>AR-240912-009 · Bảo Trâm</h2><p style="margin:4px 0 0;color:var(--muted);font-size:11px">Đã nhận đồ về lúc 15:40 hôm nay</p></div>${badge('Đang kiểm tra', 'refund')}</div><div class="card-body"><div class="inspection-item"><span class="product-thumb">♧</span><div class="copy"><strong>Selene satin · Size M</strong><span>Mã: SE-SAT-M-03 · Trả đúng mã</span></div><span class="check-circle">✓</span></div><div class="inspection-item"><span class="product-thumb blue">⌁</span><div class="copy"><strong>Khuyên pha lê</strong><span>Mã: ACC-CRYS-04 · Trả đúng mã</span></div><span class="check-circle">✓</span></div><div style="margin-top:18px"><div class="field"><label>Tình trạng Selene satin</label><div class="segmented"><button class="${state.hasDamage ? '' : 'active'}" data-action="condition-good">Không hư hại</button><button class="${state.hasDamage ? 'active' : ''}" data-action="condition-damage">Có hư hại</button></div></div>${state.hasDamage ? `<div class="form-grid" style="margin-top:13px"><div class="field"><label>Loại hư hại</label><select class="text-input"><option>Ố vàng nhẹ phần tay áo</option></select></div><div class="field"><label>Phí xử lý</label><input class="text-input" value="120.000đ" /></div></div><div class="form-message">Ảnh hư hại cần được tải lên trước khi gửi manager duyệt.</div>` : `<div class="form-message" style="color:#28654f;background:var(--green-pale)">Không ghi nhận hư hại. Có thể gửi đề nghị hoàn tiền sau khi xác nhận phí thuê.</div>`}</div></div></section>
+  <aside class="grid"><section class="card"><div class="card-heading"><h2>Tính tiền hoàn</h2><span style="color:var(--muted);font-size:10px">Tự động tính</span></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Tổng cọc đã nhận</span>${money('750.000đ')}</div><div class="info-line"><span>Phí thuê thực tế</span>${money('320.000đ')}</div><div class="info-line"><span>Phí hư hại</span>${money(fee)}</div></div><div class="refund-amount"><span>Số tiền cần hoàn khách</span><strong>${refund}</strong><small>750.000đ − 320.000đ − ${fee}</small></div><button class="button full" style="margin-top:15px" data-action="request-refund">${refundAction}</button><div class="return-note"><span>◷</span><div>${state.role === 'manager' ? 'Khi bạn xác nhận hoàn tiền, ' : 'Sau khi manager xác nhận hoàn tiền, '}mã đồ sẽ vào <b>Cleaning 12 giờ</b>, rồi tự trở lại Available.</div></div></div></section><section class="card"><div class="card-heading"><h2>${state.role === 'manager' ? 'Thông tin để duyệt' : 'Checklist trước khi gửi'}</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Đối chiếu mã đồ</span><strong style="color:var(--green)">Hoàn tất</strong></div><div class="info-line"><span>Ảnh tình trạng</span><strong style="color:var(--green)">02 ảnh</strong></div><div class="info-line"><span>Phí thuê</span><strong style="color:var(--green)">Đã chốt</strong></div></div></div></section></aside></div>`
+}
+
+function productsView() {
+  const productCard = (name, detail, count, price, tone='') => `<article class="card stock-card"><div class="stock-image ${tone}">♧</div><div class="stock-info"><h3>${name}</h3><p>${detail}</p><div class="stock-meta"><span><strong>${count}</strong> mã đang hoạt động</span><span>${price}</span></div></div></article>`
+  return `${pageHeader('Kho sản phẩm', 'Theo dõi từng mẫu, size và mã đồ vật lý đang có trong kho.', `<button class="button secondary">Nhập kho</button><button class="button">＋ Thêm sản phẩm</button>`)}
+  <div class="filter-row"><input class="search-input" placeholder="Tìm tên, mã sản phẩm..." /><select class="select-input"><option>Tất cả danh mục</option><option>Váy</option><option>Phụ kiện</option></select><select class="select-input"><option>Đang hoạt động</option><option>Đang vệ sinh</option><option>Bảo trì</option></select></div><section class="stock-grid">${productCard('Afrodille gấm','S · L · Váy dạ hội', '4','Từ 190.000đ')}${productCard('Afrodille trắng','S fit M · Váy dạ hội', '2','Từ 240.000đ','blue')}${productCard('Selene satin','M · Váy dạ hội', '3','Từ 210.000đ','black')}${productCard('Luna corset','S · M · Váy dự tiệc', '3','Từ 220.000đ','cream')}</section><section class="card" style="margin-top:16px"><div class="card-heading"><h2>Mã sản phẩm cần chú ý</h2><a href="#">Xem tất cả</a></div><div class="task-list"><div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>AF-GAM-L-01 đang vệ sinh</strong><span>Hoàn thành lúc 02:00 ngày mai</span></div>${badge('Cleaning', 'cleaning')}</div><div class="task"><i class="task-dot"></i><div class="task-copy"><strong>SE-SAT-M-03 chờ kiểm tra hư hại</strong><span>Liên kết đơn AR-240912-009</span></div>${badge('Chờ hoàn', 'refund')}</div></div></section>`
+}
+
+function placeholderView(title) { return `${pageHeader(title, 'Module này được để làm khung trong bản mockup hiện tại.')}<section class="card empty-view"><div><div class="empty-illustration">◔</div><h2>Đang chờ thiết kế chi tiết</h2><p>Ở bước phát triển tiếp theo, màn hình này sẽ dùng dữ liệu thật từ hệ thống Aura Rental.</p></div></section>` }
+
+function compactDashboardView() {
+  return `${pageHeader('Hôm nay', 'Thứ Bảy, 14 Thg 9')}
+  <div class="quick-actions"><button class="quick-action" data-view="orders"><b>3</b><span>Chờ cọc</span></button><button class="quick-action" data-view="schedule"><b>2</b><span>Giữ chỗ</span></button><button class="quick-action" data-view="returns"><b>1</b><span>Trả đồ</span></button></div>
+  <section class="card next-job"><span class="eyebrow">VIỆC TIẾP THEO</span><h2>Xác nhận cọc · Ngọc Anh</h2><p>500.000đ · Afrodille gấm S</p><button class="button full" data-view="orders">Mở đơn</button></section>
+  <section class="card compact-list"><div class="card-heading"><h2>Hôm nay</h2></div><button class="compact-row" data-view="orders"><i class="task-dot"></i><span><strong>Ngọc Anh</strong><small>Chờ cọc</small></span><b>500k</b><em>›</em></button><button class="compact-row" data-view="schedule"><i class="task-dot gold"></i><span><strong>Thu Hà</strong><small>Giao lúc 13:00</small></span><b>Giao</b><em>›</em></button><button class="compact-row" data-view="returns"><i class="task-dot green"></i><span><strong>Bảo Trâm</strong><small>Nhận trả lúc 16:30</small></span><b>Trả</b><em>›</em></button></section>
+  <button class="soft-action" data-view="issue-form">＋ Tạo giữ chỗ mới</button>`
+}
+
+function compactScheduleView() {
+  return `${pageHeader('Tìm đồ trống', 'Chọn ngày, tìm mã')}
+  <section class="card compact-search"><div class="field"><label>Váy / mã</label><input class="text-input" value="Afrodille gấm" /></div><div class="compact-dates"><div class="field"><label>Nhận</label><input class="text-input" value="14/09" /></div><div class="field"><label>Trả</label><input class="text-input" value="17/09" /></div></div><button class="button full" data-action="search-availability">Tìm mã trống</button></section>
+  <section class="card compact-list"><div class="card-heading"><h2>Afrodille gấm · S</h2>${badge('12 mã trống', 'available')}</div><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-03</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-05</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-09</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button></section>
+  <section class="card compact-list"><div class="card-heading"><h2>Kho</h2><button class="inline-link" data-action="toggle-schedule-details">${state.scheduleExpanded ? 'Ẩn mã' : 'Xem mã'}</button></div><div class="stock-mini"><span>Afrodille gấm S</span><b>12 trống · 4 thuê</b></div><div class="stock-mini"><span>Afrodille gấm L</span><b>8 trống · 3 thuê</b></div><div class="stock-mini"><span>Selene satin M</span><b>10 trống · 5 thuê</b></div>${state.scheduleExpanded ? `<div class="tiny-timeline">AF-GAM-S-02 <span>Hold · Ngọc Anh</span></div>` : ''}</section>`
+}
+
+function compactReservationView() {
+  if (state.issueComplete) return `${pageHeader('Link đã sẵn sàng', 'Gửi cho khách')}
+  <section class="card compact-result"><span class="success-icon">✓</span><h2>Ngọc Anh</h2><div class="code-box"><div class="code-row"><span>Mã váy</span><strong>AF-GAM-S-02</strong></div><div class="code-row"><span>OTP</span><strong>482 917</strong></div><div class="code-row"><span>Còn lại</span><strong>500.000đ</strong></div></div><button class="button full" data-action="copy-link">Sao chép link</button><button class="button secondary full" style="margin-top:8px" data-action="preview-form">Xem form khách</button></section>`
+  return `${pageHeader('Giữ chỗ', 'Tạo link cho khách')}
+  <section class="card compact-form"><div class="mini-steps"><b>1</b><i></i><b class="active">2</b><i></i><b>3</b></div><div class="field"><label>Khách</label><input class="text-input" value="Ngọc Anh · 0908 123 456" /></div><div class="field"><label>Đồ đã chọn</label><button class="select-card" data-view="schedule">Afrodille gấm · S <span>AF-GAM-S-02</span></button></div><div class="compact-dates"><div class="field"><label>Nhận</label><input class="text-input" value="14/09 · 14:00" /></div><div class="field"><label>Trả</label><input class="text-input" value="17/09 · 14:00" /></div></div><div class="deposit-toggle"><button class="active">Đã cọc 100k</button><button>Cọc đủ</button></div><div class="compact-total"><span>Còn cần cọc</span><strong>500.000đ</strong></div><button class="button full" data-action="generate-code">Tạo link & OTP</button></section>`
+}
+
+function compactOrdersView() {
+  return `${pageHeader('Đơn hàng', '3 đơn cần xử lý')}
+  <div class="simple-filter"><button class="active">Cần xử lý</button><button>Tất cả</button><button data-view="schedule">Tìm đồ</button></div>
+  <section class="order-cards">${orders.map(order => `<button class="order-card" data-order="${order.id}"><div><span class="order-code">${order.id}</span>${badge(order.status, order.tone)}</div><strong>${order.name}</strong><span>${order.item}</span><footer>${order.date}<b>›</b></footer></button>`).join('')}</section>`
+}
+
+function compactReturnsView() {
+  const fee = state.hasDamage ? '120.000đ' : '0đ'
+  return `${pageHeader('Trả đồ', 'Bảo Trâm · AR-240912-009')}
+  <section class="card compact-return"><div class="return-item"><span class="check-circle">✓</span><div><strong>Selene satin · M</strong><small>SE-SAT-M-03</small></div></div><div class="deposit-toggle"><button class="${state.hasDamage ? '' : 'active'}" data-action="condition-good">Ổn</button><button class="${state.hasDamage ? 'active' : ''}" data-action="condition-damage">Có lỗi</button></div>${state.hasDamage ? `<div class="field"><label>Phí xử lý</label><input class="text-input" value="${fee}" inputmode="numeric" /></div><button class="button secondary full">＋ Ảnh hư hại</button>` : ''}<div class="compact-total"><span>Hoàn khách</span><strong>${state.hasDamage ? '310.000đ' : '430.000đ'}</strong></div>${state.hasDamage ? `<small class="damage-note">750.000đ − 320.000đ − ${fee}</small>` : ''}<button class="button full" data-action="request-refund">Gửi duyệt hoàn</button></section>`
+}
+
+function render() {
+  breadcrumb.textContent = labels[state.view]
+  const views = { dashboard: compactDashboardView, schedule: compactScheduleView, 'issue-form': compactReservationView, orders: compactOrdersView, returns: compactReturnsView, products: productsView, 'order-detail': orderDetailWithIdentityView, reports: () => placeholderView('Báo cáo'), settings: () => placeholderView('Cấu hình') }
+  root.dataset.currentView = state.view
+  delete root.dataset.view
+  root.innerHTML = (views[state.view] || views.dashboard)()
+  document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view && ['dashboard','schedule','issue-form','orders','returns','products'].includes(state.view)))
+  document.querySelector('#profile-name').textContent = state.role === 'manager' ? 'Quỳnh Anh' : 'Minh Lan'
+  document.querySelector('#profile-role').textContent = state.role === 'manager' ? 'Manager' : 'Staff vận hành'
+  document.querySelector('.sidebar-user .avatar').textContent = state.role === 'manager' ? 'QA' : 'ML'
+}
+
+function showToast(message) {
+  const toast = document.createElement('div')
+  toast.className = 'toast'
+  toast.innerHTML = `<i>✓</i><span>${message}</span>`
+  toastArea.append(toast)
+  setTimeout(() => toast.remove(), 3900)
+}
+
+function openCustomerForm() {
+  modal.innerHTML = `<div class="modal-header"><div><h2>Preview — Form khách thuê</h2><p>Đây là màn khách mở từ link OTP staff gửi.</p></div><button class="close-modal" data-action="close-modal">×</button></div><div class="modal-body"><form class="customer-form" id="customer-form"><div class="customer-top"><div class="brand-mark">A</div><div><strong>Aura Rental</strong><span>Xác nhận thông tin thuê</span></div></div><div class="form-summary"><strong>Afrodille gấm · Size S</strong><span>Mã váy AF-GAM-S-02 · 14/09 → 17/09 · Gói cọc 50% + CCCD</span></div><div class="field"><label>OTP được shop gửi</label><input class="text-input" value="482 917" inputmode="numeric" /></div><div class="field"><label>Họ và tên</label><input class="text-input" value="Ngọc Anh" /></div><div class="field"><label>Số điện thoại</label><input class="text-input" value="090 812 34 56" /></div><div class="field"><label>Địa chỉ nhận / trả đồ</label><textarea class="text-input" style="height:64px;padding-top:10px">112 Võ Văn Tần, Phường 6, Quận 3, TP.HCM</textarea></div><div class="field"><label>Ảnh CCCD <small>(bắt buộc cho gói 50%)</small></label><button class="button secondary" type="button">⌁ Tải ảnh CCCD (mock)</button></div><div class="form-message">Sau khi gửi, hệ thống kiểm tra OTP, mã đồ, hold và lịch trống. Đơn chỉ được tạo nếu mọi thông tin hợp lệ.</div><button class="button full" style="margin-top:15px" type="submit">Gửi form xác nhận</button></form></div>`
+  const identityField = [...modal.querySelectorAll('.field')].find(field => field.textContent.includes('Ảnh CCCD'))
+  identityField.outerHTML = `<div class="form-message">Với gói cọc 50%, shop sẽ nhận và kiểm tra CCCD qua Instagram. Form này không thu thập hoặc lưu CCCD.</div>`
+  modalBackdrop.hidden = false
+}
+
+function closeModal() { modalBackdrop.hidden = true; modal.innerHTML = '' }
+
+function openWorkspace() {
+  state.view = 'dashboard'
+  loginScreen.hidden = true
+  appShell.hidden = false
+  mobileNav.hidden = false
+  document.body.classList.remove('login-active')
+  render()
+  showToast(`Đăng nhập thành công với vai trò ${state.role === 'manager' ? 'Manager' : 'Staff'}.`)
+}
+
+function logout() {
+  appShell.hidden = true
+  mobileNav.hidden = true
+  loginScreen.hidden = false
+  document.body.classList.add('login-active')
+  loginPassword.value = 'demo1234'
+  loginEmail.focus()
+}
+
+document.addEventListener('click', event => {
+  const loginRoleButton = event.target.closest('[data-login-role]')
+  if (loginRoleButton) {
+    state.role = loginRoleButton.dataset.loginRole
+    document.querySelectorAll('[data-login-role]').forEach(button => {
+      const active = button.dataset.loginRole === state.role
+      button.classList.toggle('active', active)
+      button.setAttribute('aria-pressed', String(active))
+    })
+    loginEmail.value = `${state.role}@demo.aurarental.vn`
+    return
+  }
+  const viewButton = event.target.closest('[data-view]')
+  if (viewButton) { event.preventDefault(); state.view = viewButton.dataset.view; render(); document.querySelector('.sidebar').classList.remove('open'); return }
+  const orderButton = event.target.closest('[data-order]')
+  if (orderButton) { state.selectedOrder = orderButton.dataset.order; state.view = 'order-detail'; render(); return }
+  const action = event.target.closest('[data-action]')?.dataset.action
+  if (!action) return
+  if (action === 'toggle-password') {
+    const showing = loginPassword.type === 'text'
+    loginPassword.type = showing ? 'password' : 'text'
+    event.target.closest('[data-action]').setAttribute('aria-label', showing ? 'Hiện mật khẩu' : 'Ẩn mật khẩu')
+  }
+  if (action === 'forgot-password') { event.preventDefault(); showToast('Mockup: yêu cầu đặt lại mật khẩu sẽ được gửi tới email công việc.') }
+  if (action === 'logout') { logout(); return }
+  if (action === 'generate-code') { state.issueComplete = true; render(); showToast('Đã tạo OTP và link form cho Ngọc Anh.') }
+  if (action === 'restart-issue') { state.issueComplete = false; render() }
+  if (action === 'copy-link') { showToast('Đã sao chép nội dung gửi khách (mockup).') }
+  if (action === 'preview-form') openCustomerForm()
+  if (action === 'close-modal') closeModal()
+  if (action === 'verify-identity') { state.idVerified = true; render(); showToast('Đã ghi nhận staff kiểm tra CCCD qua Instagram. Không có dữ liệu CCCD được lưu.') }
+  if (action === 'confirm-deposit') {
+    if (!state.idVerified) showToast('Cần staff xác nhận đã kiểm tra CCCD qua Instagram trước khi xác nhận đơn cọc 50%.')
+    else showToast('Đã xác nhận cọc còn lại. Đơn chuyển sang “Đã xác nhận”.')
+  }
+  if (action === 'condition-good') { state.hasDamage = false; render() }
+  if (action === 'condition-damage') { state.hasDamage = true; render() }
+  if (action === 'request-refund') { showToast(state.role === 'manager' ? 'Đã xác nhận hoàn tiền. Mã đồ chuyển sang Cleaning 12 giờ.' : 'Đã gửi yêu cầu hoàn tiền tới Manager.') }
+  if (action === 'search-availability') { showToast('Đã tìm 12 mã trống cho khoảng thời gian đã chọn.') }
+  if (action === 'select-asset') { showToast('Đã chọn AF-GAM-S-03. Tiếp tục cấp mã và link form cho khách.') }
+  if (action === 'toggle-schedule-details') { state.scheduleExpanded = !state.scheduleExpanded; render() }
+  if (action === 'show-operations') { showToast('Mockup: mở danh sách 18 việc vận hành cần xử lý hôm nay.') }
+  if (action === 'open-all-assets') { showToast('Mockup: danh sách sẽ dùng virtual scroll và chỉ tải theo nhóm đã chọn.') }
+})
+
+document.addEventListener('submit', event => {
+  if (event.target === loginForm) {
+    event.preventDefault()
+    openWorkspace()
+    return
+  }
+  if (event.target.id === 'customer-form') {
+    event.preventDefault()
+    closeModal()
+    state.view = 'orders'
+    render()
+    showToast('Khách đã gửi form. Hệ thống đã tự tạo đơn AR-240914-018.')
+  }
+})
+
+document.querySelector('#mobile-menu').addEventListener('click', () => document.querySelector('.sidebar').classList.toggle('open'))
+document.querySelector('#notification-button').addEventListener('click', () => showToast('3 thông báo: đơn mới, hold sắp hết hạn, yêu cầu hoàn tiền.'))
+modalBackdrop.addEventListener('click', event => { if (event.target === modalBackdrop) closeModal() })
+
+render()
