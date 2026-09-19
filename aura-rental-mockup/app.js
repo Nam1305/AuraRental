@@ -18,7 +18,31 @@ const state = {
   role: 'staff',
   scheduleExpanded: false,
   idVerified: false,
+  refundStatus: 'draft',
+  refundSnapshot: null,
+  refundPreviousApproval: null,
+  refundAdjustmentReason: '',
 }
+
+const returnOrder = {
+  id: 'AR-240912-009', customer: 'Bảo Trâm', deposit: 750000,
+  items: [
+    { name: 'Selene satin · Size M', code: 'SE-SAT-M-03', fee: 320000, package: '3 ngày' },
+    { name: 'Khuyên pha lê', code: 'ACC-CRYS-04', fee: 0, package: 'Đi kèm váy' },
+  ],
+}
+
+function formatVnd(amount) { return `${new Intl.NumberFormat('vi-VN').format(amount)}đ` }
+function refundTime() {
+  const now = new Date()
+  return `${now.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${now.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false })}`
+}
+function calculateRefund() {
+  const rentalFee = returnOrder.items.reduce((total, item) => total + item.fee, 0)
+  const damageFee = state.hasDamage ? 120000 : 0
+  return { ...returnOrder, rentalFee, damageFee, damageNote: state.hasDamage ? 'Ố vàng nhẹ phần tay áo · Selene satin' : 'Không ghi nhận hư hại', refund: Math.max(0, returnOrder.deposit - rentalFee - damageFee) }
+}
+function refundData() { return state.refundSnapshot || calculateRefund() }
 
 const orders = [
   { id: 'AR-240914-018', name: 'Ngọc Anh', initials: 'NA', item: 'Afrodille gấm · S', date: '14–17 Thg 9', status: 'Chờ cọc', tone: 'pending', deposit: '500.000đ', staff: 'Minh Lan' },
@@ -28,7 +52,7 @@ const orders = [
 ]
 
 const labels = {
-  dashboard: 'Hôm nay', schedule: 'Tìm đồ trống', 'issue-form': 'Giữ chỗ', orders: 'Đơn hàng', returns: 'Trả đồ', products: 'Kho sản phẩm', reports: 'Báo cáo', settings: 'Cấu hình', 'order-detail': 'Chi tiết đơn',
+  dashboard: 'Hôm nay', schedule: 'Tìm đồ trống', 'issue-form': 'Giữ chỗ', orders: 'Đơn hàng', returns: 'Trả đồ', products: 'Kho sản phẩm', 'product-add': 'Thêm sản phẩm', 'product-detail': 'Chi tiết sản phẩm', reports: 'Báo cáo', settings: 'Cấu hình', 'order-detail': 'Chi tiết đơn',
 }
 
 function badge(text, tone) { return `<span class="badge ${tone}">${text}</span>` }
@@ -159,9 +183,23 @@ function returnsView() {
 }
 
 function productsView() {
-  const productCard = (name, detail, count, price, tone='') => `<article class="card stock-card"><div class="stock-image ${tone}">♧</div><div class="stock-info"><h3>${name}</h3><p>${detail}</p><div class="stock-meta"><span><strong>${count}</strong> mã đang hoạt động</span><span>${price}</span></div></div></article>`
-  return `${pageHeader('Kho sản phẩm', 'Theo dõi từng mẫu, size và mã đồ vật lý đang có trong kho.', `<button class="button secondary">Nhập kho</button><button class="button">＋ Thêm sản phẩm</button>`)}
-  <div class="filter-row"><input class="search-input" placeholder="Tìm tên, mã sản phẩm..." /><select class="select-input"><option>Tất cả danh mục</option><option>Váy</option><option>Phụ kiện</option></select><select class="select-input"><option>Đang hoạt động</option><option>Đang vệ sinh</option><option>Bảo trì</option></select></div><section class="stock-grid">${productCard('Afrodille gấm','S · L · Váy dạ hội', '4','Từ 190.000đ')}${productCard('Afrodille trắng','S fit M · Váy dạ hội', '2','Từ 240.000đ','blue')}${productCard('Selene satin','M · Váy dạ hội', '3','Từ 210.000đ','black')}${productCard('Luna corset','S · M · Váy dự tiệc', '3','Từ 220.000đ','cream')}</section><section class="card" style="margin-top:16px"><div class="card-heading"><h2>Mã sản phẩm cần chú ý</h2><a href="#">Xem tất cả</a></div><div class="task-list"><div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>AF-GAM-L-01 đang vệ sinh</strong><span>Hoàn thành lúc 02:00 ngày mai</span></div>${badge('Cleaning', 'cleaning')}</div><div class="task"><i class="task-dot"></i><div class="task-copy"><strong>SE-SAT-M-03 chờ kiểm tra hư hại</strong><span>Liên kết đơn AR-240912-009</span></div>${badge('Chờ hoàn', 'refund')}</div></div></section>`
+  const productCard = (name, detail, count, price, tone='') => `<button class="card stock-card" data-view="product-detail"><div class="stock-image ${tone}">♧</div><div class="stock-info"><h3>${name}</h3><p>${detail}</p><div class="stock-meta"><span><strong>${count}</strong> mã đang hoạt động</span><span>${price}</span></div></div></button>`
+  return `${pageHeader('Kho sản phẩm', 'Theo dõi từng mẫu, size và mã đồ vật lý đang có trong kho.', `<button class="button secondary" data-action="import-stock">Nhập kho</button><button class="button" data-view="product-add">＋ Thêm sản phẩm</button>`)}
+  <button class="button mobile-catalog-add" data-view="product-add">＋ Thêm sản phẩm</button><div class="filter-row"><input class="search-input" placeholder="Tìm tên, mã sản phẩm..." /><select class="select-input"><option>Tất cả danh mục</option><option>Váy</option><option>Phụ kiện</option></select><select class="select-input"><option>Đang hoạt động</option><option>Đang vệ sinh</option><option>Bảo trì</option></select></div><section class="stock-grid">${productCard('Afrodille gấm','S · L · Váy dạ hội', '4','Từ 190.000đ')}${productCard('Afrodille trắng','S fit M · Váy dạ hội', '2','Từ 240.000đ','blue')}${productCard('Selene satin','M · Váy dạ hội', '3','Từ 210.000đ','black')}${productCard('Luna corset','S · M · Váy dự tiệc', '3','Từ 220.000đ','cream')}</section><section class="card" style="margin-top:16px"><div class="card-heading"><h2>Mã sản phẩm cần chú ý</h2><a href="#">Xem tất cả</a></div><div class="task-list"><div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>AF-GAM-L-01 đang vệ sinh</strong><span>Hoàn thành lúc 02:00 ngày mai</span></div>${badge('Cleaning', 'cleaning')}</div><div class="task"><i class="task-dot"></i><div class="task-copy"><strong>SE-SAT-M-03 chờ kiểm tra hư hại</strong><span>Liên kết đơn AR-240912-009</span></div>${badge('Chờ hoàn', 'refund')}</div></div></section>`
+}
+
+function productAddView() {
+  return `${pageHeader('Thêm sản phẩm', 'Tạo mẫu sản phẩm trước, sau đó khai báo size và từng mã đồ vật lý.', `<button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu sản phẩm</button>`)}
+  <div class="product-editor-layout"><section class="card"><div class="card-heading"><div><h2>Thông tin mẫu</h2><p>Mỗi mẫu có thể có nhiều size và mã đồ riêng.</p></div></div><div class="form-section"><div class="upload-area"><span>♧</span><strong>Thêm ảnh sản phẩm</strong><small>Kéo ảnh vào đây hoặc chọn từ thiết bị · PNG, JPG tối đa 10MB</small><button class="button secondary small" data-action="upload-product-image">Chọn ảnh</button></div><div class="form-grid"><div class="field"><label>Tên sản phẩm <b>*</b></label><input class="text-input" placeholder="Ví dụ: Afrodille gấm" /></div><div class="field"><label>Danh mục <b>*</b></label><select class="text-input"><option>Váy dạ hội</option><option>Váy dự tiệc</option><option>Phụ kiện</option></select></div><div class="field"><label>Mã mẫu</label><input class="text-input" placeholder="Tự tạo từ tên, ví dụ AF-GAM" /></div><div class="field"><label>Giá trị thay thế <b>*</b></label><input class="text-input" value="1.200.000đ" inputmode="numeric" /></div></div><div class="field"><label>Mô tả / lưu ý cho staff</label><textarea class="text-input" placeholder="Chất liệu, cách bảo quản hoặc lưu ý khi tư vấn..." style="height:76px;padding-top:10px"></textarea></div></div></section><aside class="grid"><section class="card"><div class="card-heading"><h2>Thiết lập vận hành</h2></div><div class="card-body"><div class="field"><label>Thời gian vệ sinh sau trả</label><select class="text-input"><option>12 giờ</option><option>24 giờ</option><option>48 giờ</option></select></div><div class="field"><label>Trạng thái khi tạo</label><select class="text-input"><option>Đang hoạt động</option><option>Tạm ẩn</option></select></div><p class="side-note">Giá thuê được thiết lập theo từng size ở phần bên dưới.</p></div></section></aside></div>
+  <section class="card variant-editor"><div class="card-heading"><div><h2>Size, giá thuê & mã vật lý</h2><p>Số lượng được tính từ các mã đồ. Không nhập số lượng thủ công.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-form"><div class="form-grid three"><div class="field"><label>Size <b>*</b></label><input class="text-input" value="S" /></div><div class="field"><label>Số đo</label><input class="text-input" value="84 × 64–66 × 88" /></div><div class="field"><label>SKU</label><input class="text-input" value="AF-GAM-S" /></div></div><div class="price-grid"><div class="field"><label>Giá thuê 12 giờ</label><input class="text-input" value="190.000đ" /></div><div class="field"><label>Giá thuê 1 ngày</label><input class="text-input" value="220.000đ" /></div><div class="field"><label>Giá thuê 3 ngày</label><input class="text-input" value="320.000đ" /></div></div><div class="asset-code-entry"><div><strong>Mã đồ vật lý</strong><span>Mỗi mã là một chiếc đồ riêng, không được trùng.</span></div><div class="asset-chips"><span>AF-GAM-S-01 <button aria-label="Xóa mã">×</button></span><span>AF-GAM-S-02 <button aria-label="Xóa mã">×</button></span><button class="add-code" data-action="add-asset-code">＋ Thêm mã</button></div></div></div></section><div class="mobile-product-actions"><button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu sản phẩm</button></div>`
+}
+
+function productDetailView() {
+  const assets = [['AF-GAM-S-01','Đang thuê','renting','14–17 Thg 9 · Thu Hà'],['AF-GAM-S-02','Giữ slot','pending','14–17 Thg 9 · Ngọc Anh'],['AF-GAM-S-03','Có sẵn','available','Đã vệ sinh 12 Thg 9'],['AF-GAM-L-01','Cleaning','cleaning','Sẵn sàng lúc 02:00 ngày mai']]
+  return `${pageHeader('Afrodille gấm', 'Mã mẫu AF-GAM · Váy dạ hội', `<button class="button secondary" data-view="products">← Kho sản phẩm</button><button class="button" data-action="edit-product">Chỉnh sửa</button>`)}
+  <div class="product-detail-hero"><section class="card product-showcase"><div class="product-hero-image">♧</div><div class="product-hero-copy"><div>${badge('Đang hoạt động', 'available')}</div><h2>Afrodille gấm</h2><p>Váy dạ hội · Gấm hoa · Cần vệ sinh 12 giờ sau khi trả.</p><div class="product-kpis"><span><b>4</b> mã đang hoạt động</span><span><b>2</b> size</span><span><b>190.000đ</b> giá từ</span></div></div></section><aside class="card detail-note"><div class="card-heading"><h2>Giá trị & chính sách</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Giá trị thay thế</span><strong>1.200.000đ</strong></div><div class="info-line"><span>Phụ thu từ ngày 4</span><strong>10% giá 1 ngày</strong></div><div class="info-line"><span>Thời gian vệ sinh</span><strong>12 giờ</strong></div></div></div></aside></div>
+  <section class="card" style="margin-top:16px"><div class="card-heading"><div><h2>Biến thể & bảng giá</h2><p>Giá đang áp dụng cho các reservation/đơn tạo mới.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-table"><div class="variant-row variant-head"><span>Size / số đo</span><span>12 giờ</span><span>1 ngày</span><span>3 ngày</span><span>Mã vật lý</span></div><div class="variant-row"><div><strong>S</strong><small>84 × 64–66 × 88</small></div><span>190.000đ</span><span>220.000đ</span><span>320.000đ</span><button class="inline-link" data-action="show-size-assets">3 mã ›</button></div><div class="variant-row"><div><strong>L</strong><small>92 × 72–74 × 96</small></div><span>190.000đ</span><span>220.000đ</span><span>320.000đ</span><button class="inline-link" data-action="show-size-assets">1 mã ›</button></div></div></section>
+  <section class="card" style="margin-top:16px"><div class="card-heading"><div><h2>Mã đồ vật lý</h2><p>Theo dõi tình trạng từng chiếc để tránh double-book.</p></div><button class="button secondary small" data-action="add-asset-code">＋ Thêm mã</button></div><div class="asset-detail-list">${assets.map(asset => `<div class="asset-detail-row"><span class="product-thumb">♧</span><div><strong>${asset[0]}</strong><small>${asset[3]}</small></div>${badge(asset[1], asset[2])}<button class="inline-link" data-action="view-asset-history">Lịch sử</button></div>`).join('')}</div></section>`
 }
 
 function placeholderView(title) { return `${pageHeader(title, 'Module này được để làm khung trong bản mockup hiện tại.')}<section class="card empty-view"><div><div class="empty-illustration">◔</div><h2>Đang chờ thiết kế chi tiết</h2><p>Ở bước phát triển tiếp theo, màn hình này sẽ dùng dữ liệu thật từ hệ thống Aura Rental.</p></div></section>` }
@@ -195,17 +233,52 @@ function compactOrdersView() {
 }
 
 function compactReturnsView() {
-  const fee = state.hasDamage ? '120.000đ' : '0đ'
-  return `${pageHeader('Trả đồ', 'Bảo Trâm · AR-240912-009')}
-  <section class="card compact-return"><div class="return-item"><span class="check-circle">✓</span><div><strong>Selene satin · M</strong><small>SE-SAT-M-03</small></div></div><div class="deposit-toggle"><button class="${state.hasDamage ? '' : 'active'}" data-action="condition-good">Ổn</button><button class="${state.hasDamage ? 'active' : ''}" data-action="condition-damage">Có lỗi</button></div>${state.hasDamage ? `<div class="field"><label>Phí xử lý</label><input class="text-input" value="${fee}" inputmode="numeric" /></div><button class="button secondary full">＋ Ảnh hư hại</button>` : ''}<div class="compact-total"><span>Hoàn khách</span><strong>${state.hasDamage ? '310.000đ' : '430.000đ'}</strong></div>${state.hasDamage ? `<small class="damage-note">750.000đ − 320.000đ − ${fee}</small>` : ''}<button class="button full" data-action="request-refund">Gửi duyệt hoàn</button></section>`
+  const data = refundData()
+  const manager = state.role === 'manager'
+  const draft = state.refundStatus === 'draft'
+  const pending = state.refundStatus === 'pending'
+  const approved = ['approved', 'completed'].includes(state.refundStatus)
+  const completed = state.refundStatus === 'completed'
+  const adjusting = state.refundStatus === 'adjusting'
+  const editable = draft || (manager && (pending || adjusting))
+  const status = adjusting ? 'Đang điều chỉnh' : draft ? 'Đang kiểm tra' : pending ? 'Chờ manager duyệt' : completed ? 'Đã hoàn tiền' : 'Đã duyệt · Chờ chuyển khoản'
+  let action = ''
+  if (draft) action = manager
+    ? `<button class="button full" data-action="approve-refund">✓ Lưu kiểm tra & duyệt hoàn</button><p class="refund-help">Bạn có thể tự kiểm tra và duyệt trực tiếp, không cần chờ staff gửi yêu cầu.</p>`
+    : `<button class="button full" data-action="request-refund">Gửi manager duyệt hoàn</button><p class="refund-help">Manager sẽ duyệt số tiền. Ảnh tổng kết được tạo sau khi duyệt.</p>`
+  if (pending) action = manager
+    ? `<button class="button full" data-action="approve-refund">✓ Duyệt hoàn ${formatVnd(data.refund)}</button><button class="button secondary full" data-action="return-refund-review">Yêu cầu staff kiểm tra lại</button><p class="refund-help">Duyệt sẽ tạo ảnh tổng kết; chưa xác nhận đã chuyển khoản cho khách.</p>`
+    : `<button class="button full" disabled>Đã gửi · Chờ manager duyệt</button><p class="refund-help">Đã gửi bởi Minh Lan. Manager có thể kiểm tra và điều chỉnh trước khi duyệt.</p>`
+  if (adjusting) action = manager
+    ? `<div class="field"><label for="refund-adjustment-reason">Lý do điều chỉnh <small>(bắt buộc)</small></label><textarea id="refund-adjustment-reason" class="text-input" rows="3" placeholder="Ví dụ: đối chiếu lại tình trạng đồ, bỏ phí xử lý"></textarea></div><button class="button full" data-action="approve-refund">✓ Duyệt lại ${formatVnd(data.refund)}</button><button class="button secondary full" data-action="cancel-refund-adjustment">Hủy điều chỉnh</button><p class="refund-help">Ảnh mới chỉ được tạo sau khi duyệt lại. Nếu đã gửi ảnh cũ, hãy gửi lại ảnh mới cho khách.</p>`
+    : `<button class="button full" disabled>Manager đang điều chỉnh</button><p class="refund-help">Chờ manager duyệt lại để lấy ảnh tổng kết mới.</p>`
+  if (approved) action = `<div class="refund-approved-note"><span>✓</span><div><strong>Quỳnh Anh đã duyệt ${formatVnd(data.refund)}</strong></div></div>${!completed && manager ? `<button class="button full" data-action="confirm-refund-transfer">Xác nhận đã chuyển khoản hoàn khách</button><button class="button secondary full" data-action="adjust-refund">Điều chỉnh & duyệt lại</button>` : ''}<p class="refund-help">${completed ? 'Đã ghi nhận hoàn tiền. Mã đồ chuyển sang Cleaning 12 giờ.' : 'Ảnh hiện ghi “Chờ chuyển khoản”. Xác nhận chuyển khoản sẽ cập nhật ảnh thành “Đã hoàn tiền”.'}</p>`
+  return `${pageHeader('Trả đồ & hoàn tiền', `${data.customer} · ${data.id}`)}
+  <div class="refund-demo-toolbar"><span>Xem luồng demo theo vai trò</span><div class="segmented"><button data-refund-role="staff" class="${manager ? '' : 'active'}" aria-pressed="${!manager}">Staff</button><button data-refund-role="manager" class="${manager ? 'active' : ''}" aria-pressed="${manager}">Manager</button></div></div>
+  <ol class="refund-steps"><li class="${draft || adjusting ? 'current' : 'done'}"><b>1</b><span>Kiểm tra & đối soát</span></li><li class="${approved ? 'done' : pending ? 'current' : ''}"><b>2</b><span>Manager duyệt</span></li><li class="${approved ? 'current' : ''}"><b>3</b><span>Ảnh gửi khách</span></li></ol>
+  <div class="refund-workspace"><div class="refund-operation-column">
+    <section class="card refund-inspection"><div class="card-heading"><h2>Các món khách đã thuê</h2>${badge(status, approved ? 'available' : 'pending')}</div><div class="card-body">
+      ${data.items.map(item => `<div class="return-item refund-rental-item"><span class="check-circle">✓</span><div><strong>${item.name}</strong><small>${item.code} · ${item.package}</small></div><b>${item.fee ? formatVnd(item.fee) : 'Miễn phí'}</b></div>`).join('')}
+      ${editable ? `<div class="field refund-condition"><label>Tình trạng khi nhận trả</label><div class="deposit-toggle"><button class="${data.damageFee ? '' : 'active'}" data-action="condition-good">Không hư hại</button><button class="${data.damageFee ? 'active' : ''}" data-action="condition-damage">Có hư hại</button></div></div>` : ''}
+      <div class="refund-condition-note ${data.damageFee ? 'has-damage' : ''}"><strong>${data.damageNote}</strong><span>${data.damageFee ? `Phí xử lý: ${formatVnd(data.damageFee)} · 02 ảnh tình trạng đã đính kèm (demo)` : 'Đã đối chiếu đủ mã đồ · Không phát sinh phí xử lý'}</span></div>
+    </div></section>
+    <section class="card refund-calculation"><div class="card-heading"><h2>${manager && pending ? 'Đối soát & duyệt hoàn' : 'Đối soát tiền cọc'}</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Tiền khách cọc ban đầu</span><strong>${formatVnd(data.deposit)}</strong></div><div class="info-line"><span>Tổng giá thuê</span><strong>− ${formatVnd(data.rentalFee)}</strong></div><div class="info-line"><span>Phí xử lý ${data.damageFee ? '(hư hại)' : '(không phát sinh)'}</span><strong>− ${formatVnd(data.damageFee)}</strong></div></div><div class="refund-amount"><span>${completed ? 'Đã hoàn lại khách' : 'Tiền hoàn lại khách'}</span><strong>${formatVnd(data.refund)}</strong><small>${formatVnd(data.deposit)} − ${formatVnd(data.rentalFee)} − ${formatVnd(data.damageFee)}</small></div><div class="refund-action-stack">${action}</div></div></section>
+  </div><aside class="card refund-image-panel"><div class="card-heading"><div><span class="eyebrow">GỬI KHÁCH QUA INSTAGRAM</span><h2>Ảnh tổng kết hoàn tiền</h2></div>${badge(approved ? 'PNG sẵn sàng' : 'Chưa tạo ảnh', approved ? 'available' : 'cancelled')}</div>
+    ${approved ? `<div class="refund-image-stage"><img id="refund-receipt-image" alt="Ảnh tổng kết đơn ${data.id}: cọc ${formatVnd(data.deposit)}, giá thuê ${formatVnd(data.rentalFee)}, phí xử lý ${formatVnd(data.damageFee)}, hoàn ${formatVnd(data.refund)}; ${completed ? 'đã hoàn tiền' : 'đã duyệt, chờ chuyển khoản'}" /></div><div class="refund-image-actions"><button class="button full" data-action="copy-refund-image">▣ Sao chép ảnh</button><button class="button secondary full" data-action="download-refund-image">↓ Tải ảnh PNG</button><p>Copy ảnh → mở chat Instagram → dán để gửi khách.</p><small>Nếu thiết bị không hỗ trợ copy ảnh, dùng “Tải ảnh PNG” rồi gửi trong chat.</small></div>` : `<div class="refund-image-empty"><span>▣</span><h3>${adjusting ? 'Ảnh mới chờ duyệt lại' : pending ? 'Đang chờ manager duyệt' : 'Ảnh được tạo sau khi duyệt'}</h3><p>Mã đơn, đồ đã thuê, giá thuê, cọc, phí xử lý và tiền hoàn sẽ nằm trong một ảnh gọn để gửi khách.</p><div class="refund-image-placeholder"><span>Aura Rental</span><i></i><i></i><i></i><b>Tiền hoàn lại khách</b></div></div>`}
+  </aside></div>`
 }
 
 function render() {
   breadcrumb.textContent = labels[state.view]
-  const views = { dashboard: compactDashboardView, schedule: compactScheduleView, 'issue-form': compactReservationView, orders: compactOrdersView, returns: compactReturnsView, products: productsView, 'order-detail': orderDetailWithIdentityView, reports: () => placeholderView('Báo cáo'), settings: () => placeholderView('Cấu hình') }
+  const views = { dashboard: compactDashboardView, schedule: compactScheduleView, 'issue-form': compactReservationView, orders: compactOrdersView, returns: compactReturnsView, products: productsView, 'product-add': productAddView, 'product-detail': productDetailView, 'order-detail': orderDetailWithIdentityView, reports: () => placeholderView('Báo cáo'), settings: () => placeholderView('Cấu hình') }
   root.dataset.currentView = state.view
   delete root.dataset.view
   root.innerHTML = (views[state.view] || views.dashboard)()
+  const adjustmentReason = document.querySelector('#refund-adjustment-reason')
+  if (adjustmentReason) adjustmentReason.value = state.refundAdjustmentReason
+  if (state.view === 'returns' && ['approved', 'completed'].includes(state.refundStatus)) {
+    document.querySelector('#refund-receipt-image').src = AuraRefundReceipt.create(refundData(), state.refundStatus).toDataURL('image/png')
+  }
   document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view && ['dashboard','schedule','issue-form','orders','returns','products'].includes(state.view)))
   document.querySelector('#profile-name').textContent = state.role === 'manager' ? 'Quỳnh Anh' : 'Minh Lan'
   document.querySelector('#profile-role').textContent = state.role === 'manager' ? 'Manager' : 'Staff vận hành'
@@ -218,6 +291,37 @@ function showToast(message) {
   toast.innerHTML = `<i>✓</i><span>${message}</span>`
   toastArea.append(toast)
   setTimeout(() => toast.remove(), 3900)
+}
+
+async function copyRefundImage(button) {
+  if (!['approved', 'completed'].includes(state.refundStatus)) return
+  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined' || !window.isSecureContext) {
+    showToast('Thiết bị này chưa hỗ trợ sao chép ảnh. Bạn có thể tải ảnh PNG để gửi khách.')
+    return
+  }
+  const previous = button.textContent
+  button.disabled = true
+  button.textContent = 'Đang sao chép ảnh…'
+  try {
+    const image = AuraRefundReceipt.blob(AuraRefundReceipt.create(refundData(), state.refundStatus))
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': image })])
+    showToast('Đã sao chép ảnh PNG. Mở chat Instagram và dán để gửi khách.')
+  } catch {
+    showToast('Không thể sao chép ảnh. Cho phép clipboard hoặc dùng nút Tải ảnh PNG.')
+  } finally {
+    button.disabled = false
+    button.textContent = previous
+  }
+}
+
+function downloadRefundImage() {
+  if (!['approved', 'completed'].includes(state.refundStatus)) return
+  const link = document.createElement('a')
+  link.href = AuraRefundReceipt.create(refundData(), state.refundStatus).toDataURL('image/png')
+  link.download = `Aura-Rental-${returnOrder.id}-v${refundData().revision || 1}-${state.refundStatus}.png`
+  document.body.append(link)
+  link.click()
+  link.remove()
 }
 
 function openCustomerForm() {
@@ -248,7 +352,19 @@ function logout() {
   loginEmail.focus()
 }
 
+document.addEventListener('input', event => {
+  if (event.target.id === 'refund-adjustment-reason' && state.role === 'manager' && state.refundStatus === 'adjusting') {
+    state.refundAdjustmentReason = event.target.value
+  }
+})
+
 document.addEventListener('click', event => {
+  const refundRoleButton = event.target.closest('[data-refund-role]')
+  if (refundRoleButton) {
+    state.role = refundRoleButton.dataset.refundRole
+    render()
+    return
+  }
   const loginRoleButton = event.target.closest('[data-login-role]')
   if (loginRoleButton) {
     state.role = loginRoleButton.dataset.loginRole
@@ -283,14 +399,75 @@ document.addEventListener('click', event => {
     if (!state.idVerified) showToast('Cần staff xác nhận đã kiểm tra CCCD qua Instagram trước khi xác nhận đơn cọc 50%.')
     else showToast('Đã xác nhận cọc còn lại. Đơn chuyển sang “Đã xác nhận”.')
   }
-  if (action === 'condition-good') { state.hasDamage = false; render() }
-  if (action === 'condition-damage') { state.hasDamage = true; render() }
-  if (action === 'request-refund') { showToast(state.role === 'manager' ? 'Đã xác nhận hoàn tiền. Mã đồ chuyển sang Cleaning 12 giờ.' : 'Đã gửi yêu cầu hoàn tiền tới Manager.') }
+  if (['condition-good', 'condition-damage'].includes(action) && (state.refundStatus === 'draft' || (state.role === 'manager' && ['pending', 'adjusting'].includes(state.refundStatus)))) {
+    state.hasDamage = action === 'condition-damage'
+    if (state.refundSnapshot) state.refundSnapshot = { ...state.refundSnapshot, ...calculateRefund() }
+    render()
+  }
+  if (action === 'request-refund' && state.role === 'staff' && state.refundStatus === 'draft') {
+    state.refundSnapshot = { ...refundData(), requestedAt: refundTime() }
+    state.refundStatus = 'pending'
+    render()
+    showToast('Đã gửi yêu cầu hoàn tiền cho manager Quỳnh Anh duyệt.')
+  }
+  if (action === 'approve-refund' && state.role === 'manager' && ['draft', 'pending', 'adjusting'].includes(state.refundStatus)) {
+    const adjusting = state.refundStatus === 'adjusting'
+    if (adjusting && !state.refundAdjustmentReason.trim()) {
+      showToast('Vui lòng nhập lý do điều chỉnh trước khi duyệt lại.')
+      document.querySelector('#refund-adjustment-reason')?.focus()
+      return
+    }
+    state.refundSnapshot = { ...refundData(), approvedAt: refundTime(), revision: adjusting ? state.refundPreviousApproval.revision + 1 : 1, ...(adjusting ? { adjustmentReason: state.refundAdjustmentReason.trim(), previousApproval: state.refundPreviousApproval } : {}) }
+    state.refundPreviousApproval = null
+    state.refundAdjustmentReason = ''
+    state.refundStatus = 'approved'
+    render()
+    showToast('Đã duyệt hoàn tiền. Ảnh tổng kết đã sẵn sàng để sao chép gửi khách.')
+  }
+  if (action === 'adjust-refund' && state.role === 'manager' && state.refundStatus === 'approved') {
+    state.refundPreviousApproval = state.refundSnapshot
+    state.hasDamage = state.refundSnapshot.damageFee > 0
+    state.refundSnapshot = null
+    state.refundAdjustmentReason = ''
+    state.refundStatus = 'adjusting'
+    render()
+  }
+  if (action === 'cancel-refund-adjustment' && state.role === 'manager' && state.refundStatus === 'adjusting') {
+    state.refundSnapshot = state.refundPreviousApproval
+    state.hasDamage = state.refundSnapshot.damageFee > 0
+    state.refundPreviousApproval = null
+    state.refundAdjustmentReason = ''
+    state.refundStatus = 'approved'
+    render()
+    showToast('Đã hủy điều chỉnh, giữ nguyên số tiền và ảnh đã duyệt.')
+  }
+  if (action === 'return-refund-review' && state.role === 'manager' && state.refundStatus === 'pending') {
+    state.refundStatus = 'draft'
+    state.refundSnapshot = null
+    render()
+    showToast('Đã trả yêu cầu cho staff kiểm tra và gửi duyệt lại.')
+  }
+  if (action === 'confirm-refund-transfer' && state.role === 'manager' && state.refundStatus === 'approved') {
+    state.refundSnapshot = { ...state.refundSnapshot, refundedAt: refundTime() }
+    state.refundStatus = 'completed'
+    render()
+    showToast('Đã ghi nhận chuyển khoản hoàn khách và cập nhật ảnh. Mã đồ chuyển sang Cleaning 12 giờ (demo).')
+  }
+  if (action === 'copy-refund-image') copyRefundImage(event.target.closest('[data-action]'))
+  if (action === 'download-refund-image') downloadRefundImage()
   if (action === 'search-availability') { showToast('Đã tìm 12 mã trống cho khoảng thời gian đã chọn.') }
   if (action === 'select-asset') { showToast('Đã chọn AF-GAM-S-03. Tiếp tục cấp mã và link form cho khách.') }
   if (action === 'toggle-schedule-details') { state.scheduleExpanded = !state.scheduleExpanded; render() }
   if (action === 'show-operations') { showToast('Mockup: mở danh sách 18 việc vận hành cần xử lý hôm nay.') }
   if (action === 'open-all-assets') { showToast('Mockup: danh sách sẽ dùng virtual scroll và chỉ tải theo nhóm đã chọn.') }
+  if (action === 'save-product') { state.view = 'product-detail'; render(); showToast('Đã lưu sản phẩm mới và tạo các mã đồ vật lý.') }
+  if (action === 'upload-product-image') { showToast('Mockup: ảnh sản phẩm đã sẵn sàng để tải lên.') }
+  if (action === 'add-variant') { showToast('Mockup: đã thêm một dòng size mới để khai báo.') }
+  if (action === 'add-asset-code') { showToast('Mockup: thêm mã đồ vật lý mới.') }
+  if (action === 'import-stock') { showToast('Mockup: bạn có thể nhập danh sách mã đồ từ file ở đây.') }
+  if (action === 'edit-product') { state.view = 'product-add'; render() }
+  if (action === 'show-size-assets') { showToast('Đang hiển thị các mã vật lý thuộc size đã chọn.') }
+  if (action === 'view-asset-history') { showToast('Mockup: xem timeline reservation, thuê và vệ sinh của mã đồ.') }
 })
 
 document.addEventListener('submit', event => {

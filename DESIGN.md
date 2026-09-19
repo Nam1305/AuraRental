@@ -26,7 +26,7 @@ Sản phẩm: Afrodille gấm
 
 - `inventory_item` là **một chiếc đồ vật lý**, thuộc duy nhất một mẫu/màu/chất liệu/size; mỗi item có `asset_code` duy nhất.
 - Số lượng của một mẫu + size được hệ thống tự đếm từ các `inventory_item`, không nhập tay. Ví dụ: Afrodille gấm size S có 19 mã vật lý.
-- Một mã vật lý không được có hai reservation/đơn active giao thời gian. Nếu staff chỉ giữ theo mẫu + size mà chưa chọn mã, backend phải giữ một suất capacity của variant và kiểm tra lại trước khi gán mã cuối cùng.
+- Một mã vật lý không được có hai reservation/đơn active giao thời gian, tính cả buffer cleaning. Nếu staff chỉ chọn mẫu + size, backend tự gán một mã trống khi tạo reservation; MVP không giữ capacity chưa có mã. Staff/manager có thể đổi mã trong transaction nếu mã mới vẫn trống.
 
 ### 2.2. Reservation thay cho hold ngắn hạn
 
@@ -62,6 +62,9 @@ Với nhánh cọc 100.000đ, staff bắt buộc đặt `deposit_deadline_at` (h
 - Phí thuê luôn được khấu trừ từ cọc khi hoàn đồ, không thu thành giao dịch phí thuê riêng.
 - `tiền hoàn = tổng cọc đã nhận − phí thuê thực tế − phí xử lý hư hại`.
 - Không hoàn âm. Nếu cọc không đủ, ghi `additional_collection` cần thu thêm.
+- Staff kiểm tra và gửi đề nghị hoàn cho manager. Manager có toàn quyền kiểm tra/đối soát và duyệt trực tiếp; không bắt buộc có bước staff gửi đề nghị trước.
+- Manager được điều chỉnh yêu cầu đang chờ hoặc trả về staff kiểm tra lại. Sau khi duyệt nhưng chưa chuyển khoản, điều chỉnh cần lý do và duyệt lại, lưu phiên bản trước và tạo ảnh mới.
+- Duyệt hoàn và xác nhận đã chuyển khoản là hai thao tác riêng. Ảnh PNG thể hiện đúng trạng thái, mã đơn, các món đã thuê, giá thuê, phí xử lý, cọc ban đầu và tiền hoàn; không hiển thị các mốc thời gian. Hỗ trợ copy ảnh và tải PNG.
 
 ## 3. Luồng nghiệp vụ
 
@@ -88,8 +91,9 @@ flowchart TD
     M --> O
     O --> Q[Giao hàng và cho thuê]
     Q --> R[Nhận trả, kiểm tra hư hại]
-    R --> S[Manager duyệt / xác nhận hoàn tiền]
-    S --> T[Cleaning]
+    R -- Staff gửi đề nghị, hoặc manager tự xử lý --> S[Manager duyệt hoàn; tạo ảnh PNG]
+    S --> V[Xác nhận đã chuyển khoản; cập nhật ảnh PNG]
+    V --> T[Cleaning]
     T --> U[Available]
 ```
 
@@ -116,12 +120,11 @@ stateDiagram-v2
       CONFIRMED --> PREPARING
       PREPARING --> RENTING: Đã giao
       RENTING --> INSPECTING: Đã nhận trả
-      INSPECTING --> REFUND_PENDING
-      REFUND_PENDING --> COMPLETED: Hoàn tiền xong
+      INSPECTING --> COMPLETED: Đã duyệt và hoàn/đối soát xong
     }
 ```
 
-`Reservation` và `Order` là hai thực thể riêng. Reservation có thể chưa bao giờ thành đơn; Order không được staff tạo trực tiếp.
+`Reservation` và `Order` là hai thực thể riêng. Reservation có thể chưa bao giờ thành đơn; Order không được staff tạo trực tiếp. Trạng thái kiểm tra/duyệt hoàn/chi trả thuộc hồ sơ trả đồ và bản duyệt, không gộp vào status đơn. Đủ cọc và checklist CCCD (nếu chọn 50%) đều là điều kiện để CONFIRMED.
 
 ## 4. Screen flow và module
 
@@ -173,7 +176,7 @@ Khi submit, backend thực hiện trong một transaction:
 
 1. Xác thực OTP chưa hết hạn/chưa dùng và mã hàng thuộc reservation active.
 2. Kiểm tra dữ liệu bắt buộc và availability tại đúng thời điểm submit.
-3. Snapshot giá/policy; tạo `orders`, `order_items`; liên kết các payment từ reservation; chuyển reservation thành `CONVERTED_TO_ORDER`.
+3. Copy giá/tỷ lệ đã chốt từ reservation items sang `orders`, `order_items`; đọc ledger qua `reservation_id` (không chuyển/nhân đôi payment); chuyển reservation thành `CONVERTED_TO_ORDER`. Lịch bận sau chuyển đổi đọc qua order thay cho reservation active.
 4. Xác định trạng thái order: `PENDING_DEPOSIT`, `PENDING_VERIFICATION` hoặc `CONFIRMED` theo nhánh cọc.
 5. Đánh dấu OTP đã dùng, gửi notification và trả `order_no`.
 
@@ -181,51 +184,20 @@ Nếu OTP/mã/reservation không hợp lệ hoặc phát sinh xung đột, khôn
 
 ## 6. Database design
 
-```mermaid
-erDiagram
-    USERS ||--o{ RESERVATIONS : creates
-    CUSTOMERS ||--o{ RESERVATIONS : makes
-    RESERVATIONS ||--|{ RESERVATION_ITEMS : reserves
-    PRODUCT_VARIANTS ||--o{ RESERVATION_ITEMS : requested_as
-    INVENTORY_ITEMS ||--o{ RESERVATION_ITEMS : assigned_as
-    RESERVATIONS ||--o{ PAYMENTS : receives
-    RESERVATIONS ||--o| ORDERS : converts_to
-    CUSTOMERS ||--o{ ORDERS : places
-    ORDERS ||--|{ ORDER_ITEMS : contains
-    INVENTORY_ITEMS ||--o{ ORDER_ITEMS : assigned_to
-    ORDERS ||--o{ PAYMENTS : has
-    INVENTORY_ITEMS ||--o{ AVAILABILITY_BLOCKS : blocks
-    RESERVATIONS ||--o{ OTP_TOKENS : authorizes
-    ORDERS ||--o{ ORDER_STATUS_HISTORY : tracks
-    USERS ||--o{ AUDIT_LOGS : acts
-```
+Thiết kế tối giản 13 bảng và ERD: [database/README.md](database/README.md). Các bảng/thuộc tính PostgreSQL: [database/schema.sql](database/schema.sql). Không trigger, stored function, exclusion constraint hay bảng hạ tầng audit/outbox trong bản này.
 
-| Bảng | Cột quan trọng | Ghi chú |
-|---|---|---|
-| `users` | `id`, `name`, `role`, `is_active` | `staff`, `manager`. |
-| `customers` | `id`, `name`, `phone`, `default_address`, `notes` | Không lưu CCCD. |
-| `products` | `id`, `code`, `name`, `category`, `is_active` | Mẫu váy/phụ kiện. |
-| `product_variants` | `id`, `product_id`, `sku`, `size`, `measurements`, `replacement_value` | Một mẫu + size. |
-| `inventory_items` | `id`, `variant_id`, `asset_code`, `condition`, `status`, `cleaning_duration_hours` | Một mã là một món vật lý; `asset_code` unique. |
-| `rental_packages` / `rental_prices` | package, variant, price, effective dates | Gói 12h/1d/3d và giá versioned. |
-| `pricing_policies` | `extra_day_rate`, `reservation_amount`, `rounding_rule`, `effective_from` | `reservation_amount = 100.000`; không có `hold_expiry_hours`. |
-| `reservations` | `id`, `reservation_no`, `customer_id`, `status`, `deposit_path`, `deposit_deadline_at` nullable, `created_by`, `converted_order_id` | `deposit_path`: `SLOT_100K`, `TARGET_50`, `TARGET_100`; deadline bắt buộc khi `SLOT_100K`. |
-| `reservation_items` | `id`, `reservation_id`, `variant_id`, `inventory_item_id` nullable, `start_at`, `end_at` | Giữ mã cụ thể hoặc một suất variant trước khi chốt mã. |
-| `orders` | `id`, `order_no`, `reservation_id`, `customer_id`, `status`, `deposit_plan`, `deposit_required`, `rental_fee`, `damage_fee`, `refund_amount` | Chỉ tạo bởi backend từ form. |
-| `order_items` | `id`, `order_id`, `variant_id`, `inventory_item_id`, snapshot tên/size/mã/giá trị/giá thuê | Gán mã vật lý bắt buộc trước `CONFIRMED`. |
-| `payments` | `id`, `reservation_id` nullable, `order_id` nullable, `type`, `direction`, `amount`, `method`, `transaction_ref`, `proof_url`, `status`, `confirmed_by` | Type: `slot_reservation`, `target_deposit`, `damage_charge`, `additional_collection`, `refund`. |
-| `identity_checks` | `id`, `reservation_id` nullable, `order_id` nullable, `status`, `verified_by`, `verified_at` | Chỉ checklist CCCD Instagram; **không có file, số hoặc ảnh CCCD**. |
-| `availability_blocks` | `id`, `inventory_item_id`, `reservation_id` nullable, `order_id` nullable, `block_type`, `start_at`, `end_at`, `status` | `reservation`, `rental`, `cleaning`, `maintenance`. |
-| `otp_tokens` | `id`, `reservation_id`, `token_hash`, `expires_at`, `max_uses`, `used_at`, `created_by` | OTP hết hạn chỉ cần cấp lại; không làm mất reservation/cọc. |
-| `shipments`, `damage_assessments`, `order_status_history`, `audit_logs` | dữ liệu vận hành/timeline | Không xóa bản ghi tài chính hay audit. |
+Các quyết định dữ liệu chính:
 
-### Ràng buộc và hiệu năng
-
-- Unique: `asset_code`, `sku`, `reservation_no`, `order_no`.
-- Index: `reservations(status, deposit_deadline_at)`, `orders(status, rental_start_at)`, `reservation_items(variant_id, start_at, end_at)`, `order_items(inventory_item_id, start_at)`, `availability_blocks(inventory_item_id, start_at, end_at, status)`.
-- Dùng transaction + khóa dòng/PostgreSQL exclusion constraint để chặn overlap trên cùng `inventory_item_id`.
-- Với reservation theo variant, availability query phải bảo đảm số suất còn lại > số reservation/đơn active trong khoảng thời gian yêu cầu.
-- Lịch/search chạy server-side; cursor pagination và virtual scrolling cho danh sách mã lớn.
+- Catalog `products → product_variants → inventory_items`; ảnh lưu danh sách path trên product. Giá thuê hiện tại theo variant/gói, settings một dòng cho cọc slot/tỷ lệ ngày thêm/cleaning mặc định. Số lượng lấy từ mã vật lý.
+- Reservation gán mã nội bộ ngay khi nhận tiền; backend kiểm tra lịch qua reservation/order items và cleaning buffer bằng transaction + lock mã vật lý. Không bảng availability blocks riêng.
+- `payments.reservation_id` là liên kết ledger ổn định trước/sau khi có đơn; không nhân đôi tiền cọc. Không ghi khoản phí khấu trừ như một khoản tiền khách đã chuyển riêng.
+- OTP/hash/link/hạn dùng nằm trên reservation, không bảng token/submission riêng; một reservation có tối đa một order. Thông tin giao/nhận, checklist CCCD và settled nằm trên order.
+- Kiểm tra tình trạng, phí thực tế, phí xử lý và ảnh hư hại nằm trên `order_items`. `refunds` lưu một dòng cho mỗi phiên bản đối soát với totals và `items_snapshot` JSON. Manager được `DRAFT → APPROVED` trực tiếp, không bắt buộc staff gửi.
+- Backend không cho sửa dữ liệu đã duyệt; điều chỉnh trước chuyển khoản tạo phiên bản mới có lý do, duyệt lại mới thay thế bản cũ. Không chi/copy ảnh khi đang có bản điều chỉnh mở.
+- Approval khác payout: payment hoàn confirmed gắn bản duyệt, đúng số tiền và chỉ một lần/đơn do backend kiểm tra. Hoàn 0đ set settled trên order, không tạo giao dịch 0đ.
+- PNG sinh từ snapshot của phiếu duyệt + trạng thái đối soát trên order, không bảng tài liệu ảnh riêng và không timeline gửi khách. Timestamp vẫn cần cho lịch thuê/cleaning.
+- DDL chỉ PK/FK/unique cơ bản. Backend thực hiện role/state validation, tính tiền, chống trùng lịch, duyệt/chi lặp bằng transaction + lock. Không có audit/outbox/notification persisted hoặc module đảo giao dịch ở bản tối giản; thêm khi có nhu cầu thực tế.
+- Schema nghiệp vụ `aura` chỉ backend .NET truy cập, không expose cho frontend Supabase API. Đây là thiết kế/baseline, chưa áp dụng lên database thật.
 
 ## 7. Công thức tiền
 
@@ -237,7 +209,7 @@ if rental_days > 3:
 deposit_target = sum(replacement_value_snapshot) × (50% hoặc 100%)
 total_deposit_received = confirmed(slot_reservation + target_deposit)
 deposit_remaining = max(0, deposit_target - total_deposit_received)
-damage_fee = sum(approved_damage_assessments)
+damage_fee = processing_fee trong refunds của bản APPROVED
 refund_amount = max(0, total_deposit_received - actual_rental_fee - damage_fee)
 additional_collection = max(0, actual_rental_fee + damage_fee - total_deposit_received)
 ```
@@ -253,6 +225,7 @@ Ví dụ: váy trị giá 1.200.000đ, thuê 3 ngày 320.000đ, khách đã cọ
 | Customer OTP | Verify OTP và submit form idempotent; backend tự chuyển reservation thành order. |
 | Orders | List/filter/detail, transition state, assign mã vật lý, checklist CCCD Instagram. Không có endpoint tạo order cho staff. |
 | Payments | Ghi nhận chứng từ, xác nhận payment, tính cọc còn lại, hoàn tiền/thu thêm. |
+| Returns & refunds | Queue chung, kiểm tra, gửi đề nghị tùy chọn, manager duyệt trực tiếp, phiên bản điều chỉnh có lý do, xác nhận chuyển khoản/đối soát, PNG theo bản duyệt. |
 | Fulfillment | Shipment, check-in/check-out, hư hại, cleaning. |
 | Notifications | In-app realtime; adapter SMS/Zalo/email sau này. |
 
