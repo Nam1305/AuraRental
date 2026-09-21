@@ -14,7 +14,7 @@ const state = {
   view: 'dashboard',
   issueComplete: false,
   selectedOrder: 'AR-240914-018',
-  hasDamage: false,
+  returnItemConditions: { dress: 'damaged', accessory: 'missing' },
   role: 'staff',
   scheduleExpanded: false,
   idVerified: false,
@@ -27,8 +27,20 @@ const state = {
 const returnOrder = {
   id: 'AR-240912-009', customer: 'Bảo Trâm', deposit: 750000,
   items: [
-    { name: 'Selene satin · Size M', code: 'SE-SAT-M-03', fee: 320000, package: '3 ngày' },
-    { name: 'Khuyên pha lê', code: 'ACC-CRYS-04', fee: 0, package: 'Đi kèm váy' },
+    {
+      id: 'dress', name: 'Selene satin · Size M', code: 'SE-SAT-M-03', fee: 320000, package: '3 ngày',
+      issue: {
+        damaged: { type: 'Rách nhẹ', severity: 'Cần sửa', fee: 120000, note: 'Rách 2 cm ở lai váy, cần may lại.', photos: 2, outcome: 'Bảo trì · chưa thể cho thuê' },
+        missing: { type: 'Không trả váy', severity: 'Mất toàn bộ item', fee: 1200000, note: 'Chưa nhận lại mã SE-SAT-M-03 từ khách.', photos: 0, outcome: 'Mất · loại khỏi tồn kho' },
+      },
+    },
+    {
+      id: 'accessory', name: 'Khuyên pha lê', code: 'ACC-CRYS-04', fee: 0, package: 'Đi kèm váy', replacementValue: 180000,
+      issue: {
+        damaged: { type: 'Gãy chốt', severity: 'Cần thay chốt', fee: 80000, note: 'Chốt khuyên bị gãy, cần thay trước khi cho thuê lại.', photos: 1, outcome: 'Bảo trì · chưa thể cho thuê' },
+        missing: { type: 'Mất 1 chiếc', severity: 'Không thể hoàn bộ', fee: 180000, note: 'Khách trả thiếu 1 chiếc khuyên.', photos: 0, outcome: 'Mất · loại khỏi tồn kho' },
+      },
+    },
   ],
 }
 
@@ -38,9 +50,16 @@ function refundTime() {
   return `${now.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${now.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false })}`
 }
 function calculateRefund() {
-  const rentalFee = returnOrder.items.reduce((total, item) => total + item.fee, 0)
-  const damageFee = state.hasDamage ? 120000 : 0
-  return { ...returnOrder, rentalFee, damageFee, damageNote: state.hasDamage ? 'Ố vàng nhẹ phần tay áo · Selene satin' : 'Không ghi nhận hư hại', refund: Math.max(0, returnOrder.deposit - rentalFee - damageFee) }
+  const items = returnOrder.items.map(item => {
+    const condition = state.returnItemConditions[item.id] || 'good'
+    const issue = item.issue[condition]
+    return { ...item, condition, processingFee: issue?.fee || 0, inspection: issue || null }
+  })
+  const rentalFee = items.reduce((total, item) => total + item.fee, 0)
+  const damageFee = items.reduce((total, item) => total + item.processingFee, 0)
+  const issueCount = items.filter(item => item.condition !== 'good').length
+  const netSettlement = returnOrder.deposit - rentalFee - damageFee
+  return { ...returnOrder, items, rentalFee, damageFee, damageNote: issueCount ? `${issueCount} món có phát sinh xử lý` : 'Không ghi nhận hư hại', refund: Math.max(0, netSettlement), additionalCollection: Math.max(0, -netSettlement) }
 }
 function refundData() { return state.refundSnapshot || calculateRefund() }
 
@@ -173,13 +192,7 @@ function orderDetailWithIdentityView() {
 }
 
 function returnsView() {
-  const fee = state.hasDamage ? '120.000đ' : '0đ'
-  const refund = state.hasDamage ? '310.000đ' : '430.000đ'
-  const refundAction = state.role === 'manager' ? 'Duyệt & xác nhận hoàn tiền' : 'Gửi manager duyệt hoàn'
-  return `${pageHeader('Nhận trả & hoàn tiền', 'Kiểm tra đồ, ghi nhận hư hại nếu có. Manager sẽ duyệt trước khi hoàn tiền.', `<button class="button secondary" data-view="orders">Xem đơn hàng</button>`)}
-  <div class="alert-strip"><span>ⓘ</span><span><strong>Quy tắc hoàn tiền:</strong> tổng cọc đã nhận − phí thuê − phí xử lý hư hại. Hệ thống không cho hoàn âm.</span></div>
-  <div class="return-layout"><section class="card"><div class="card-heading"><div><h2>AR-240912-009 · Bảo Trâm</h2><p style="margin:4px 0 0;color:var(--muted);font-size:11px">Đã nhận đồ về lúc 15:40 hôm nay</p></div>${badge('Đang kiểm tra', 'refund')}</div><div class="card-body"><div class="inspection-item"><span class="product-thumb">♧</span><div class="copy"><strong>Selene satin · Size M</strong><span>Mã: SE-SAT-M-03 · Trả đúng mã</span></div><span class="check-circle">✓</span></div><div class="inspection-item"><span class="product-thumb blue">⌁</span><div class="copy"><strong>Khuyên pha lê</strong><span>Mã: ACC-CRYS-04 · Trả đúng mã</span></div><span class="check-circle">✓</span></div><div style="margin-top:18px"><div class="field"><label>Tình trạng Selene satin</label><div class="segmented"><button class="${state.hasDamage ? '' : 'active'}" data-action="condition-good">Không hư hại</button><button class="${state.hasDamage ? 'active' : ''}" data-action="condition-damage">Có hư hại</button></div></div>${state.hasDamage ? `<div class="form-grid" style="margin-top:13px"><div class="field"><label>Loại hư hại</label><select class="text-input"><option>Ố vàng nhẹ phần tay áo</option></select></div><div class="field"><label>Phí xử lý</label><input class="text-input" value="120.000đ" /></div></div><div class="form-message">Ảnh hư hại cần được tải lên trước khi gửi manager duyệt.</div>` : `<div class="form-message" style="color:#28654f;background:var(--green-pale)">Không ghi nhận hư hại. Có thể gửi đề nghị hoàn tiền sau khi xác nhận phí thuê.</div>`}</div></div></section>
-  <aside class="grid"><section class="card"><div class="card-heading"><h2>Tính tiền hoàn</h2><span style="color:var(--muted);font-size:10px">Tự động tính</span></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Tổng cọc đã nhận</span>${money('750.000đ')}</div><div class="info-line"><span>Phí thuê thực tế</span>${money('320.000đ')}</div><div class="info-line"><span>Phí hư hại</span>${money(fee)}</div></div><div class="refund-amount"><span>Số tiền cần hoàn khách</span><strong>${refund}</strong><small>750.000đ − 320.000đ − ${fee}</small></div><button class="button full" style="margin-top:15px" data-action="request-refund">${refundAction}</button><div class="return-note"><span>◷</span><div>${state.role === 'manager' ? 'Khi bạn xác nhận hoàn tiền, ' : 'Sau khi manager xác nhận hoàn tiền, '}mã đồ sẽ vào <b>Cleaning 12 giờ</b>, rồi tự trở lại Available.</div></div></div></section><section class="card"><div class="card-heading"><h2>${state.role === 'manager' ? 'Thông tin để duyệt' : 'Checklist trước khi gửi'}</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Đối chiếu mã đồ</span><strong style="color:var(--green)">Hoàn tất</strong></div><div class="info-line"><span>Ảnh tình trạng</span><strong style="color:var(--green)">02 ảnh</strong></div><div class="info-line"><span>Phí thuê</span><strong style="color:var(--green)">Đã chốt</strong></div></div></div></section></aside></div>`
+  return compactReturnsView()
 }
 
 function productsView() {
@@ -242,27 +255,32 @@ function compactReturnsView() {
   const adjusting = state.refundStatus === 'adjusting'
   const editable = draft || (manager && (pending || adjusting))
   const status = adjusting ? 'Đang điều chỉnh' : draft ? 'Đang kiểm tra' : pending ? 'Chờ manager duyệt' : completed ? 'Đã hoàn tiền' : 'Đã duyệt · Chờ chuyển khoản'
+  const settlementLabel = data.additionalCollection ? 'Cần thu thêm khách' : completed ? 'Đã hoàn lại khách' : 'Tiền hoàn lại khách'
+  const settlementAmount = data.additionalCollection || data.refund
   let action = ''
   if (draft) action = manager
     ? `<button class="button full" data-action="approve-refund">✓ Lưu kiểm tra & duyệt hoàn</button><p class="refund-help">Bạn có thể tự kiểm tra và duyệt trực tiếp, không cần chờ staff gửi yêu cầu.</p>`
-    : `<button class="button full" data-action="request-refund">Gửi manager duyệt hoàn</button><p class="refund-help">Manager sẽ duyệt số tiền. Ảnh tổng kết được tạo sau khi duyệt.</p>`
+    : `<button class="button full" data-action="request-refund">Gửi manager duyệt đối soát</button><p class="refund-help">Manager sẽ duyệt số tiền hoàn hoặc khoản cần thu thêm. Ảnh tổng kết được tạo sau khi duyệt.</p>`
   if (pending) action = manager
-    ? `<button class="button full" data-action="approve-refund">✓ Duyệt hoàn ${formatVnd(data.refund)}</button><button class="button secondary full" data-action="return-refund-review">Yêu cầu staff kiểm tra lại</button><p class="refund-help">Duyệt sẽ tạo ảnh tổng kết; chưa xác nhận đã chuyển khoản cho khách.</p>`
+    ? `<button class="button full" data-action="approve-refund">✓ Duyệt ${data.additionalCollection ? `thu thêm ${formatVnd(data.additionalCollection)}` : `hoàn ${formatVnd(data.refund)}`}</button><button class="button secondary full" data-action="return-refund-review">Yêu cầu staff kiểm tra lại</button><p class="refund-help">Duyệt sẽ tạo ảnh tổng kết; chưa xác nhận đã đối soát tiền với khách.</p>`
     : `<button class="button full" disabled>Đã gửi · Chờ manager duyệt</button><p class="refund-help">Đã gửi bởi Minh Lan. Manager có thể kiểm tra và điều chỉnh trước khi duyệt.</p>`
   if (adjusting) action = manager
     ? `<div class="field"><label for="refund-adjustment-reason">Lý do điều chỉnh <small>(bắt buộc)</small></label><textarea id="refund-adjustment-reason" class="text-input" rows="3" placeholder="Ví dụ: đối chiếu lại tình trạng đồ, bỏ phí xử lý"></textarea></div><button class="button full" data-action="approve-refund">✓ Duyệt lại ${formatVnd(data.refund)}</button><button class="button secondary full" data-action="cancel-refund-adjustment">Hủy điều chỉnh</button><p class="refund-help">Ảnh mới chỉ được tạo sau khi duyệt lại. Nếu đã gửi ảnh cũ, hãy gửi lại ảnh mới cho khách.</p>`
     : `<button class="button full" disabled>Manager đang điều chỉnh</button><p class="refund-help">Chờ manager duyệt lại để lấy ảnh tổng kết mới.</p>`
-  if (approved) action = `<div class="refund-approved-note"><span>✓</span><div><strong>Quỳnh Anh đã duyệt ${formatVnd(data.refund)}</strong></div></div>${!completed && manager ? `<button class="button full" data-action="confirm-refund-transfer">Xác nhận đã chuyển khoản hoàn khách</button><button class="button secondary full" data-action="adjust-refund">Điều chỉnh & duyệt lại</button>` : ''}<p class="refund-help">${completed ? 'Đã ghi nhận hoàn tiền. Mã đồ chuyển sang Cleaning 12 giờ.' : 'Ảnh hiện ghi “Chờ chuyển khoản”. Xác nhận chuyển khoản sẽ cập nhật ảnh thành “Đã hoàn tiền”.'}</p>`
+  if (approved) action = `<div class="refund-approved-note"><span>✓</span><div><strong>Quỳnh Anh đã duyệt ${data.additionalCollection ? `cần thu ${formatVnd(data.additionalCollection)}` : `hoàn ${formatVnd(data.refund)}`}</strong></div></div>${!completed && manager ? `<button class="button full" data-action="confirm-refund-transfer">${data.additionalCollection ? 'Xác nhận đã thu thêm từ khách' : 'Xác nhận đã chuyển khoản hoàn khách'}</button><button class="button secondary full" data-action="adjust-refund">Điều chỉnh & duyệt lại</button>` : ''}<p class="refund-help">${completed ? 'Đã ghi nhận đối soát. Mã đồ chuyển sang Cleaning 12 giờ.' : data.additionalCollection ? 'Xác nhận sau khi đã thu đủ khoản chênh lệch từ khách.' : 'Ảnh hiện ghi “Chờ chuyển khoản”. Xác nhận chuyển khoản sẽ cập nhật ảnh thành “Đã hoàn tiền”.'}</p>`
   return `${pageHeader('Trả đồ & hoàn tiền', `${data.customer} · ${data.id}`)}
   <div class="refund-demo-toolbar"><span>Xem luồng demo theo vai trò</span><div class="segmented"><button data-refund-role="staff" class="${manager ? '' : 'active'}" aria-pressed="${!manager}">Staff</button><button data-refund-role="manager" class="${manager ? 'active' : ''}" aria-pressed="${manager}">Manager</button></div></div>
   <ol class="refund-steps"><li class="${draft || adjusting ? 'current' : 'done'}"><b>1</b><span>Kiểm tra & đối soát</span></li><li class="${approved ? 'done' : pending ? 'current' : ''}"><b>2</b><span>Manager duyệt</span></li><li class="${approved ? 'current' : ''}"><b>3</b><span>Ảnh gửi khách</span></li></ol>
   <div class="refund-workspace"><div class="refund-operation-column">
-    <section class="card refund-inspection"><div class="card-heading"><h2>Các món khách đã thuê</h2>${badge(status, approved ? 'available' : 'pending')}</div><div class="card-body">
-      ${data.items.map(item => `<div class="return-item refund-rental-item"><span class="check-circle">✓</span><div><strong>${item.name}</strong><small>${item.code} · ${item.package}</small></div><b>${item.fee ? formatVnd(item.fee) : 'Miễn phí'}</b></div>`).join('')}
-      ${editable ? `<div class="field refund-condition"><label>Tình trạng khi nhận trả</label><div class="deposit-toggle"><button class="${data.damageFee ? '' : 'active'}" data-action="condition-good">Không hư hại</button><button class="${data.damageFee ? 'active' : ''}" data-action="condition-damage">Có hư hại</button></div></div>` : ''}
-      <div class="refund-condition-note ${data.damageFee ? 'has-damage' : ''}"><strong>${data.damageNote}</strong><span>${data.damageFee ? `Phí xử lý: ${formatVnd(data.damageFee)} · 02 ảnh tình trạng đã đính kèm (demo)` : 'Đã đối chiếu đủ mã đồ · Không phát sinh phí xử lý'}</span></div>
+    <section class="card refund-inspection"><div class="card-heading"><div><h2>Kiểm tra từng món trả về</h2><p class="card-subtitle">Chọn tình trạng, lưu bằng chứng và hướng xử lý kho.</p></div>${badge(status, approved ? 'available' : 'pending')}</div><div class="card-body inspection-list">
+      ${data.items.map(item => `<article class="inspection-card ${item.condition}">
+        <div class="inspection-card-head"><span class="inspection-icon">${item.condition === 'good' ? '✓' : item.condition === 'missing' ? '!' : '↯'}</span><div><strong>${item.name}</strong><small>${item.code} · ${item.package}</small></div><span class="inspection-fee">${item.processingFee ? `− ${formatVnd(item.processingFee)}` : 'Không phí'}</span></div>
+        ${editable ? `<div class="item-condition-control" role="group" aria-label="Tình trạng ${item.name}"><button class="${item.condition === 'good' ? 'active good' : ''}" data-action="set-item-condition" data-item-id="${item.id}" data-condition="good">Tốt</button><button class="${item.condition === 'damaged' ? 'active damaged' : ''}" data-action="set-item-condition" data-item-id="${item.id}" data-condition="damaged">Hư hỏng</button><button class="${item.condition === 'missing' ? 'active missing' : ''}" data-action="set-item-condition" data-item-id="${item.id}" data-condition="missing">Mất</button></div>` : `<div class="item-condition-result">${item.condition === 'good' ? 'Tình trạng tốt' : item.condition === 'missing' ? 'Đã xác nhận mất' : 'Đã xác nhận hư hỏng'}</div>`}
+        ${item.inspection ? `<div class="item-issue-detail"><div><span>Vấn đề</span><strong>${item.inspection.type}</strong></div><div><span>Mức độ</span><strong>${item.inspection.severity}</strong></div><div><span>Kho sau xử lý</span><strong>${item.inspection.outcome}</strong></div><p>${item.inspection.note}</p><footer><span>${item.inspection.photos ? `▣ ${item.inspection.photos} ảnh tình trạng` : '○ Chưa có ảnh — ghi nhận khi khách vắng mặt'}</span><button class="inline-link" data-action="open-item-evidence">${editable ? 'Sửa chi tiết' : 'Xem bằng chứng'}</button></footer></div>` : `<div class="item-good-detail">✓ Đủ mã đồ · chuyển sang vệ sinh 12 giờ sau khi đối soát.</div>`}
+      </article>`).join('')}
+      <div class="inspection-summary ${data.damageFee ? 'has-issues' : ''}"><span>${data.damageFee ? '!' : '✓'}</span><div><strong>${data.damageNote}</strong><small>${data.damageFee ? `Tổng phí xử lý: ${formatVnd(data.damageFee)} · phí được tính theo từng món.` : 'Đã đối chiếu đủ mã đồ · Không phát sinh phí xử lý.'}</small></div></div>
     </div></section>
-    <section class="card refund-calculation"><div class="card-heading"><h2>${manager && pending ? 'Đối soát & duyệt hoàn' : 'Đối soát tiền cọc'}</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Tiền khách cọc ban đầu</span><strong>${formatVnd(data.deposit)}</strong></div><div class="info-line"><span>Tổng giá thuê</span><strong>− ${formatVnd(data.rentalFee)}</strong></div><div class="info-line"><span>Phí xử lý ${data.damageFee ? '(hư hại)' : '(không phát sinh)'}</span><strong>− ${formatVnd(data.damageFee)}</strong></div></div><div class="refund-amount"><span>${completed ? 'Đã hoàn lại khách' : 'Tiền hoàn lại khách'}</span><strong>${formatVnd(data.refund)}</strong><small>${formatVnd(data.deposit)} − ${formatVnd(data.rentalFee)} − ${formatVnd(data.damageFee)}</small></div><div class="refund-action-stack">${action}</div></div></section>
+    <section class="card refund-calculation"><div class="card-heading"><h2>${manager && pending ? 'Đối soát & duyệt hoàn' : 'Đối soát tiền cọc'}</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Tiền khách cọc ban đầu</span><strong>${formatVnd(data.deposit)}</strong></div><div class="info-line"><span>Tổng giá thuê</span><strong>− ${formatVnd(data.rentalFee)}</strong></div><div class="info-line"><span>Phí xử lý ${data.damageFee ? '(hư hại/mất)' : '(không phát sinh)'}</span><strong>− ${formatVnd(data.damageFee)}</strong></div></div><div class="refund-amount ${data.additionalCollection ? 'additional-amount' : ''}"><span>${settlementLabel}</span><strong>${formatVnd(settlementAmount)}</strong><small>${formatVnd(data.deposit)} − ${formatVnd(data.rentalFee)} − ${formatVnd(data.damageFee)}${data.additionalCollection ? ' · tiền cọc không đủ bù phí' : ''}</small></div><div class="refund-action-stack">${action}</div></div></section>
   </div><aside class="card refund-image-panel"><div class="card-heading"><div><span class="eyebrow">GỬI KHÁCH QUA INSTAGRAM</span><h2>Ảnh tổng kết hoàn tiền</h2></div>${badge(approved ? 'PNG sẵn sàng' : 'Chưa tạo ảnh', approved ? 'available' : 'cancelled')}</div>
     ${approved ? `<div class="refund-image-stage"><img id="refund-receipt-image" alt="Ảnh tổng kết đơn ${data.id}: cọc ${formatVnd(data.deposit)}, giá thuê ${formatVnd(data.rentalFee)}, phí xử lý ${formatVnd(data.damageFee)}, hoàn ${formatVnd(data.refund)}; ${completed ? 'đã hoàn tiền' : 'đã duyệt, chờ chuyển khoản'}" /></div><div class="refund-image-actions"><button class="button full" data-action="copy-refund-image">▣ Sao chép ảnh</button><button class="button secondary full" data-action="download-refund-image">↓ Tải ảnh PNG</button><p>Copy ảnh → mở chat Instagram → dán để gửi khách.</p><small>Nếu thiết bị không hỗ trợ copy ảnh, dùng “Tải ảnh PNG” rồi gửi trong chat.</small></div>` : `<div class="refund-image-empty"><span>▣</span><h3>${adjusting ? 'Ảnh mới chờ duyệt lại' : pending ? 'Đang chờ manager duyệt' : 'Ảnh được tạo sau khi duyệt'}</h3><p>Mã đơn, đồ đã thuê, giá thuê, cọc, phí xử lý và tiền hoàn sẽ nằm trong một ảnh gọn để gửi khách.</p><div class="refund-image-placeholder"><span>Aura Rental</span><i></i><i></i><i></i><b>Tiền hoàn lại khách</b></div></div>`}
   </aside></div>`
@@ -399,11 +417,13 @@ document.addEventListener('click', event => {
     if (!state.idVerified) showToast('Cần staff xác nhận đã kiểm tra CCCD qua Instagram trước khi xác nhận đơn cọc 50%.')
     else showToast('Đã xác nhận cọc còn lại. Đơn chuyển sang “Đã xác nhận”.')
   }
-  if (['condition-good', 'condition-damage'].includes(action) && (state.refundStatus === 'draft' || (state.role === 'manager' && ['pending', 'adjusting'].includes(state.refundStatus)))) {
-    state.hasDamage = action === 'condition-damage'
+  if (action === 'set-item-condition' && (state.refundStatus === 'draft' || (state.role === 'manager' && ['pending', 'adjusting'].includes(state.refundStatus)))) {
+    const button = event.target.closest('[data-action]')
+    state.returnItemConditions[button.dataset.itemId] = button.dataset.condition
     if (state.refundSnapshot) state.refundSnapshot = { ...state.refundSnapshot, ...calculateRefund() }
     render()
   }
+  if (action === 'open-item-evidence') showToast('Mockup: mở ảnh, mô tả, mức độ và hướng xử lý kho của món đã chọn.')
   if (action === 'request-refund' && state.role === 'staff' && state.refundStatus === 'draft') {
     state.refundSnapshot = { ...refundData(), requestedAt: refundTime() }
     state.refundStatus = 'pending'
@@ -426,7 +446,6 @@ document.addEventListener('click', event => {
   }
   if (action === 'adjust-refund' && state.role === 'manager' && state.refundStatus === 'approved') {
     state.refundPreviousApproval = state.refundSnapshot
-    state.hasDamage = state.refundSnapshot.damageFee > 0
     state.refundSnapshot = null
     state.refundAdjustmentReason = ''
     state.refundStatus = 'adjusting'
@@ -434,7 +453,6 @@ document.addEventListener('click', event => {
   }
   if (action === 'cancel-refund-adjustment' && state.role === 'manager' && state.refundStatus === 'adjusting') {
     state.refundSnapshot = state.refundPreviousApproval
-    state.hasDamage = state.refundSnapshot.damageFee > 0
     state.refundPreviousApproval = null
     state.refundAdjustmentReason = ''
     state.refundStatus = 'approved'

@@ -46,6 +46,44 @@ button:disabled { cursor:default; opacity:.6; }
 .refund-rental-item strong { font-size:12px; }
 .refund-rental-item small { line-height:1.4; overflow-wrap:anywhere; }
 .refund-rental-item > b { font-size:12px; white-space:nowrap; }
+.card-subtitle { margin:4px 0 0; color:var(--muted); font-size:11px; font-weight:400; }
+.inspection-list { display:grid; gap:12px; }
+.inspection-card { overflow:hidden; border:1px solid var(--line); border-radius:10px; background:#fff; }
+.inspection-card.damaged { border-color:#ead8b7; }
+.inspection-card.missing { border-color:#ebcfd3; }
+.inspection-card-head { display:flex; align-items:center; gap:10px; padding:13px; }
+.inspection-card-head > div { min-width:0; flex:1; }
+.inspection-card-head strong,.inspection-card-head small { display:block; }
+.inspection-card-head strong { font-size:12px; }
+.inspection-card-head small { margin-top:3px; color:var(--muted); font-size:10px; }
+.inspection-icon { display:grid; place-items:center; flex:0 0 auto; width:28px; height:28px; border-radius:50%; color:var(--green); background:var(--green-pale); font-size:14px; font-weight:800; }
+.damaged .inspection-icon { color:#855c18; background:var(--gold-pale); }
+.missing .inspection-icon { color:var(--red); background:var(--red-pale); }
+.inspection-fee { color:var(--muted); font-size:11px; font-weight:750; white-space:nowrap; }
+.damaged .inspection-fee { color:#855c18; }
+.missing .inspection-fee { color:var(--red); }
+.item-condition-control { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:3px; margin:0 13px 12px; border-radius:8px; background:#f3efec; }
+.item-condition-control button { min-height:31px; border-radius:6px; color:var(--muted); background:transparent; font-size:10px; font-weight:700; }
+.item-condition-control button.active { color:var(--ink); background:white; box-shadow:0 1px 3px rgba(55,35,25,.09); }
+.item-condition-control button.active.good { color:var(--green); }
+.item-condition-control button.active.damaged { color:#855c18; }
+.item-condition-control button.active.missing { color:var(--red); }
+.item-condition-result { margin:0 13px 12px; padding:8px 10px; border-radius:7px; color:var(--muted); background:#f7f5f3; font-size:10px; font-weight:700; }
+.item-issue-detail { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:12px 13px; border-top:1px solid #f1eeeb; background:#fffcf8; }
+.missing .item-issue-detail { background:#fffafb; }
+.item-issue-detail div { min-width:0; }
+.item-issue-detail span,.item-issue-detail strong { display:block; }
+.item-issue-detail span { color:var(--muted); font-size:9px; }
+.item-issue-detail strong { margin-top:3px; color:#5d5148; font-size:10px; line-height:1.35; }
+.item-issue-detail p { grid-column:1 / -1; margin:3px 0 0; color:#5d5148; font-size:11px; line-height:1.5; }
+.item-issue-detail footer { display:flex; grid-column:1 / -1; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:10px; }
+.item-good-detail { padding:11px 13px; color:var(--green); border-top:1px solid #f1eeeb; background:#f7fcf9; font-size:10px; }
+.inspection-summary { display:flex; align-items:flex-start; gap:9px; padding:11px 12px; border-radius:8px; color:var(--green); background:var(--green-pale); }
+.inspection-summary.has-issues { color:#855c18; background:var(--gold-pale); }
+.inspection-summary > span { display:grid; place-items:center; flex:0 0 auto; width:20px; height:20px; border-radius:50%; color:inherit; background:rgba(255,255,255,.65); font-size:12px; font-weight:800; }
+.inspection-summary strong,.inspection-summary small { display:block; }
+.inspection-summary strong { font-size:11px; }
+.inspection-summary small { margin-top:3px; font-size:10px; line-height:1.45; }
 .refund-condition { margin-top:15px; }
 .refund-condition-note { display:grid; gap:5px; padding:12px; margin-top:14px; border-radius:8px; background:var(--green-pale); color:var(--green); }
 .refund-condition-note strong { font-size:11px; }
@@ -87,6 +125,9 @@ button:disabled { cursor:default; opacity:.6; }
   .refund-rental-item { flex-wrap:wrap; }
   .refund-rental-item > div { flex-basis:calc(100% - 42px); }
   .refund-rental-item > b { margin-left:35px; }
+  .item-issue-detail { grid-template-columns:1fr 1fr; }
+  .item-issue-detail div:last-of-type { grid-column:1 / -1; }
+  .item-issue-detail footer { align-items:flex-start; flex-direction:column; }
   .refund-image-stage { padding:13px; }
   .refund-image-actions { padding:15px; }
 }
@@ -187,7 +228,7 @@ button:disabled { cursor:default; opacity:.6; }
 
 .detail-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr); gap:16px; }.detail-title { display:flex; align-items:flex-start; gap:11px; }.detail-title h1 { margin:0; font-size:20px; }.detail-title p { margin:5px 0 0; color:var(--muted); font-size:12px; }.timeline { position:relative; padding: 4px 0 3px 8px; }.timeline:before { content:""; position:absolute; top:9px; bottom:9px; left:12px; width:1px; background:var(--line); }.timeline-item { position:relative; padding:0 0 17px 26px; }.timeline-item:last-child {padding-bottom:0}.timeline-dot { position:absolute; left:7px; top:4px; width:11px; height:11px; border:2px solid white; border-radius:50%; background:var(--rose); box-shadow:0 0 0 1px #d791a1; }.timeline-dot.pending { background:var(--gold); box-shadow:0 0 0 1px #dfbb7e; }.timeline-item strong,.timeline-item span {display:block}.timeline-item strong{font-size:12px}.timeline-item span{margin-top:3px;color:var(--muted);font-size:11px}.info-list { display:grid; gap:0; }.info-line { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #f2efec; font-size:12px; }.info-line:last-child {border-bottom:0}.info-line span { color:var(--muted); }.info-line strong { text-align:right; }.product-row {display:flex;align-items:center;gap:10px;padding:13px 0;border-top:1px solid #f1eeeb}.product-row:first-child{border-top:0}.product-row .product-thumb{width:43px;height:48px}.product-row strong,.product-row span{display:block}.product-row strong{font-size:12px}.product-row span{margin-top:3px;color:var(--muted);font-size:11px}.product-row .price{margin-left:auto;text-align:right;font-weight:700}.payment-progress { display:flex; gap:4px; height:7px; overflow:hidden; border-radius:6px; background:#efeae6; }.payment-progress span { width:100%; background:var(--green); }.payment-progress i { width:15%; background:var(--gold); }.progress-caption{display:flex;justify-content:space-between;margin-top:7px;color:var(--muted);font-size:10px}
 
-.return-layout { display:grid; grid-template-columns: minmax(0,1.15fr) minmax(310px,.85fr); gap:16px; }.inspection-item { display:flex; align-items:center; gap:11px; padding:13px 0; border-bottom:1px solid #f1eeeb; }.inspection-item:last-child{border-bottom:0}.check-circle {display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:var(--green);background:var(--green-pale);font-size:13px;font-weight:700}.inspection-item .copy{flex:1}.inspection-item strong,.inspection-item span{display:block}.inspection-item strong{font-size:12px}.inspection-item span{color:var(--muted);font-size:11px;margin-top:3px}.segmented { display:flex; gap:3px; padding:3px; background:#f3efec; border-radius:8px; }.segmented button { flex:1; min-height:31px; border-radius:6px; color:var(--muted); background:transparent; font-size:11px; font-weight:650; }.segmented button.active { color:var(--ink); background:white; box-shadow:0 1px 3px rgba(55,35,25,.09); }.refund-amount { padding:17px; border-radius:9px; color:#5e3841; background:var(--rose-pale); }.refund-amount span{display:block;font-size:11px}.refund-amount strong{display:block;margin-top:4px;font-size:27px;letter-spacing:-.8px}.refund-amount small{display:block;margin-top:7px;color:#815a62;font-size:10px}.return-note{display:flex;gap:8px;margin-top:12px;color:var(--muted);font-size:11px;line-height:1.5}.return-note span{color:var(--rose);font-size:15px}
+.return-layout { display:grid; grid-template-columns: minmax(0,1.15fr) minmax(310px,.85fr); gap:16px; }.inspection-item { display:flex; align-items:center; gap:11px; padding:13px 0; border-bottom:1px solid #f1eeeb; }.inspection-item:last-child{border-bottom:0}.check-circle {display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:var(--green);background:var(--green-pale);font-size:13px;font-weight:700}.inspection-item .copy{flex:1}.inspection-item strong,.inspection-item span{display:block}.inspection-item strong{font-size:12px}.inspection-item span{color:var(--muted);font-size:11px;margin-top:3px}.segmented { display:flex; gap:3px; padding:3px; background:#f3efec; border-radius:8px; }.segmented button { flex:1; min-height:31px; border-radius:6px; color:var(--muted); background:transparent; font-size:11px; font-weight:650; }.segmented button.active { color:var(--ink); background:white; box-shadow:0 1px 3px rgba(55,35,25,.09); }.refund-amount { padding:17px; border-radius:9px; color:#5e3841; background:var(--rose-pale); }.refund-amount span{display:block;font-size:11px}.refund-amount strong{display:block;margin-top:4px;font-size:27px;letter-spacing:-.8px}.refund-amount small{display:block;margin-top:7px;color:#815a62;font-size:10px}.refund-amount.additional-amount { color:#8e3434; background:var(--red-pale); }.refund-amount.additional-amount small { color:#a54b4b; }.return-note{display:flex;gap:8px;margin-top:12px;color:var(--muted);font-size:11px;line-height:1.5}.return-note span{color:var(--rose);font-size:15px}
 
 .stock-grid { display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:16px; }.stock-card { overflow:hidden; padding:0; border:1px solid var(--line); text-align:left; cursor:pointer; transition:transform .16s ease,box-shadow .16s ease; }.stock-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }.stock-image { display:grid; place-items:center; height:130px; color:#9c5064; background:linear-gradient(145deg,#f6dfde,#c16b7d); font-size:52px; }.stock-image.blue { color:#397093;background:linear-gradient(145deg,#dcecf3,#83aac3); }.stock-image.black { color:white;background:linear-gradient(145deg,#9b8e89,#332d2b); }.stock-image.cream { color:#8b7358;background:linear-gradient(145deg,#fffaf2,#d4b792); }.stock-info{padding:13px}.stock-info h3{margin:0;font-size:13px}.stock-info p{margin:4px 0 10px;color:var(--muted);font-size:11px}.stock-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}.stock-meta strong{color:var(--ink);font-size:11px}
 

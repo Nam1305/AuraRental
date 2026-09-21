@@ -75,7 +75,6 @@ CREATE TABLE reservations (
     status text NOT NULL DEFAULT 'ACTIVE',
     rental_start_at timestamptz NOT NULL,
     rental_end_at timestamptz NOT NULL,
-    deposit_entry text NOT NULL,
     deposit_plan text NOT NULL,
     deposit_required numeric(14,0) NOT NULL,
     deposit_deadline_at timestamptz,
@@ -83,7 +82,6 @@ CREATE TABLE reservations (
     form_token_hash text UNIQUE,
     otp_expires_at timestamptz,
     otp_used_at timestamptz,
-    cancellation_reason text,
     created_by uuid NOT NULL REFERENCES users (id),
     created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -96,8 +94,7 @@ CREATE TABLE reservation_items (
     replacement_value numeric(14,0) NOT NULL,
     rental_price numeric(14,0) NOT NULL,
     one_day_price numeric(14,0) NOT NULL,
-    extra_day_rate numeric(6,4) NOT NULL,
-    cleaning_hours integer NOT NULL,
+    extra_day_rate numeric(6,4) NOT NULL,s
     UNIQUE (reservation_id, inventory_item_id)
 );
 
