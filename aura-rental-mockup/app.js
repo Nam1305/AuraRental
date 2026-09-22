@@ -9,11 +9,15 @@ const loginEmail = document.querySelector('#login-email')
 const loginPassword = document.querySelector('#login-password')
 const appShell = document.querySelector('#app-shell')
 const mobileNav = document.querySelector('#mobile-nav')
+const activeBranchName = document.querySelector('#active-branch-name')
 
 const state = {
   view: 'dashboard',
   issueComplete: false,
   selectedOrder: 'AR-240914-018',
+  branchId: 'hanoi',
+  rentalPackage: '3D',
+  selectedAsset: 'HN-AF-GAM-S-03',
   returnItemConditions: { dress: 'damaged', accessory: 'missing' },
   role: 'staff',
   scheduleExpanded: false,
@@ -23,6 +27,22 @@ const state = {
   refundPreviousApproval: null,
   refundAdjustmentReason: '',
 }
+
+const branches = {
+  hanoi: {
+    id: 'hanoi', code: 'HN', city: 'Hà Nội', name: 'Hà Nội · Nguyễn Trãi', address: '128 Nguyễn Trãi, Thanh Xuân',
+    packages: [{ code: '12H', label: '12 giờ', price: 190000 }, { code: '1D', label: '1 ngày', price: 220000 }, { code: '3D', label: '3 ngày', price: 320000 }],
+    assets: ['HN-AF-GAM-S-03', 'HN-AF-GAM-S-05', 'HN-AF-GAM-S-09'], available: 12, renting: 4, holds: 2,
+  },
+  saigon: {
+    id: 'saigon', code: 'SG', city: 'Sài Gòn', name: 'Sài Gòn · Quận 3', address: '112 Võ Văn Tần, Quận 3',
+    packages: [{ code: '1D', label: '1 ngày', price: 260000 }, { code: '2D', label: '2 ngày', price: 360000 }, { code: '3D', label: '3 ngày', price: 440000 }],
+    assets: ['SG-AF-GAM-S-01', 'SG-AF-GAM-S-04', 'SG-AF-GAM-S-07'], available: 7, renting: 3, holds: 1,
+  },
+}
+
+function currentBranch() { return branches[state.branchId] }
+function currentPackage() { return currentBranch().packages.find(item => item.code === state.rentalPackage) || currentBranch().packages[0] }
 
 const returnOrder = {
   id: 'AR-240912-009', customer: 'Bảo Trâm', deposit: 750000,
@@ -50,7 +70,10 @@ function refundTime() {
   return `${now.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${now.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false })}`
 }
 function calculateRefund() {
-  const items = returnOrder.items.map(item => {
+  const baseOrder = state.branchId === 'saigon'
+    ? { ...returnOrder, id: 'SG-240913-004', customer: 'Uyên Nhi', deposit: 900000, items: returnOrder.items.map(item => item.id === 'dress' ? { ...item, code: 'SG-SE-SAT-M-02', fee: 440000 } : { ...item, code: 'SG-ACC-CRYS-02' }) }
+    : returnOrder
+  const items = baseOrder.items.map(item => {
     const condition = state.returnItemConditions[item.id] || 'good'
     const issue = item.issue[condition]
     return { ...item, condition, processingFee: issue?.fee || 0, inspection: issue || null }
@@ -58,16 +81,17 @@ function calculateRefund() {
   const rentalFee = items.reduce((total, item) => total + item.fee, 0)
   const damageFee = items.reduce((total, item) => total + item.processingFee, 0)
   const issueCount = items.filter(item => item.condition !== 'good').length
-  const netSettlement = returnOrder.deposit - rentalFee - damageFee
-  return { ...returnOrder, items, rentalFee, damageFee, damageNote: issueCount ? `${issueCount} món có phát sinh xử lý` : 'Không ghi nhận hư hại', refund: Math.max(0, netSettlement), additionalCollection: Math.max(0, -netSettlement) }
+  const netSettlement = baseOrder.deposit - rentalFee - damageFee
+  return { ...baseOrder, items, rentalFee, damageFee, damageNote: issueCount ? `${issueCount} món có phát sinh xử lý` : 'Không ghi nhận hư hại', refund: Math.max(0, netSettlement), additionalCollection: Math.max(0, -netSettlement) }
 }
 function refundData() { return state.refundSnapshot || calculateRefund() }
 
 const orders = [
-  { id: 'AR-240914-018', name: 'Ngọc Anh', initials: 'NA', item: 'Afrodille gấm · S', date: '14–17 Thg 9', status: 'Chờ cọc', tone: 'pending', deposit: '500.000đ', staff: 'Minh Lan' },
-  { id: 'AR-240913-014', name: 'Thu Hà', initials: 'TH', item: 'Afrodille trắng · S', date: '14–15 Thg 9', status: 'Đang thuê', tone: 'renting', deposit: '1.550.000đ', staff: 'Minh Lan' },
-  { id: 'AR-240912-009', name: 'Bảo Trâm', initials: 'BT', item: 'Selene satin · M', date: '12–15 Thg 9', status: 'Chờ hoàn', tone: 'refund', deposit: '750.000đ', staff: 'Hạ Vy' },
-  { id: 'AR-240911-006', name: 'Lan Phương', initials: 'LP', item: 'Afrodille gấm · L', date: '11–14 Thg 9', status: 'Đã xác nhận', tone: 'confirmed', deposit: '600.000đ', staff: 'Minh Lan' },
+  { id: 'AR-240914-018', branch: 'hanoi', name: 'Ngọc Anh', initials: 'NA', item: 'Afrodille gấm · S', date: '14–17 Thg 9', status: 'Chờ cọc', tone: 'pending', deposit: '500.000đ', staff: 'Minh Lan' },
+  { id: 'AR-240913-014', branch: 'hanoi', name: 'Thu Hà', initials: 'TH', item: 'Afrodille trắng · S', date: '14–15 Thg 9', status: 'Đang thuê', tone: 'renting', deposit: '1.550.000đ', staff: 'Minh Lan' },
+  { id: 'AR-240912-009', branch: 'hanoi', name: 'Bảo Trâm', initials: 'BT', item: 'Selene satin · M', date: '12–15 Thg 9', status: 'Chờ hoàn', tone: 'refund', deposit: '750.000đ', staff: 'Hạ Vy' },
+  { id: 'SG-240914-007', branch: 'saigon', name: 'Khánh Linh', initials: 'KL', item: 'Afrodille gấm · S', date: '21–23 Thg 9', status: 'Chờ cọc', tone: 'pending', deposit: '600.000đ', staff: 'Mai Anh' },
+  { id: 'SG-240913-004', branch: 'saigon', name: 'Uyên Nhi', initials: 'UN', item: 'Selene satin · M', date: '20–21 Thg 9', status: 'Đang thuê', tone: 'renting', deposit: '1.200.000đ', staff: 'Mai Anh' },
 ]
 
 const labels = {
@@ -80,6 +104,11 @@ function money(value) { return `<strong>${value}</strong>` }
 
 function pageHeader(title, description, actions = '') {
   return `<div class="page-header"><div><h1>${title}</h1><p>${description}</p></div><div class="header-actions">${actions}</div></div>`
+}
+
+function branchScopeBar() {
+  const branch = currentBranch()
+  return `<button class="branch-scope-bar" data-action="open-branch-picker"><span class="branch-pin">⌖</span><span><small>ĐANG LÀM VIỆC TẠI</small><strong>${branch.name}</strong></span><em>Đổi ›</em></button>`
 }
 
 function ordersTable(items = orders) {
@@ -196,53 +225,72 @@ function returnsView() {
 }
 
 function productsView() {
+  const branch = currentBranch()
   const productCard = (name, detail, count, price, tone='') => `<button class="card stock-card" data-view="product-detail"><div class="stock-image ${tone}">♧</div><div class="stock-info"><h3>${name}</h3><p>${detail}</p><div class="stock-meta"><span><strong>${count}</strong> mã đang hoạt động</span><span>${price}</span></div></div></button>`
-  return `${pageHeader('Kho sản phẩm', 'Theo dõi từng mẫu, size và mã đồ vật lý đang có trong kho.', `<button class="button secondary" data-action="import-stock">Nhập kho</button><button class="button" data-view="product-add">＋ Thêm sản phẩm</button>`)}
-  <button class="button mobile-catalog-add" data-view="product-add">＋ Thêm sản phẩm</button><div class="filter-row"><input class="search-input" placeholder="Tìm tên, mã sản phẩm..." /><select class="select-input"><option>Tất cả danh mục</option><option>Váy</option><option>Phụ kiện</option></select><select class="select-input"><option>Đang hoạt động</option><option>Đang vệ sinh</option><option>Bảo trì</option></select></div><section class="stock-grid">${productCard('Afrodille gấm','S · L · Váy dạ hội', '4','Từ 190.000đ')}${productCard('Afrodille trắng','S fit M · Váy dạ hội', '2','Từ 240.000đ','blue')}${productCard('Selene satin','M · Váy dạ hội', '3','Từ 210.000đ','black')}${productCard('Luna corset','S · M · Váy dự tiệc', '3','Từ 220.000đ','cream')}</section><section class="card" style="margin-top:16px"><div class="card-heading"><h2>Mã sản phẩm cần chú ý</h2><a href="#">Xem tất cả</a></div><div class="task-list"><div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>AF-GAM-L-01 đang vệ sinh</strong><span>Hoàn thành lúc 02:00 ngày mai</span></div>${badge('Cleaning', 'cleaning')}</div><div class="task"><i class="task-dot"></i><div class="task-copy"><strong>SE-SAT-M-03 chờ kiểm tra hư hại</strong><span>Liên kết đơn AR-240912-009</span></div>${badge('Chờ hoàn', 'refund')}</div></div></section>`
+  const priceFrom = formatVnd(branch.packages[0].price)
+  return `${pageHeader('Kho sản phẩm', `Tồn kho và giá đang áp dụng tại ${branch.city}.`, `<button class="button secondary" data-action="import-stock">Nhập kho</button><button class="button" data-view="product-add">＋ Thêm sản phẩm</button>`)}
+  ${branchScopeBar()}<button class="button mobile-catalog-add" data-view="product-add">＋ Thêm sản phẩm tại ${branch.code}</button><div class="filter-row"><input class="search-input" placeholder="Tìm tên, mã sản phẩm..." /><select class="select-input"><option>Tất cả danh mục</option><option>Váy</option><option>Phụ kiện</option></select><select class="select-input"><option>Đang hoạt động</option><option>Đang vệ sinh</option><option>Bảo trì</option></select></div><section class="stock-grid">${productCard('Afrodille gấm','S · L · Váy dạ hội', branch.available,`Từ ${priceFrom}`)}${productCard('Afrodille trắng','S fit M · Váy dạ hội', Math.max(2, branch.available - 4),`Từ ${formatVnd(branch.packages[0].price + 50000)}`,'blue')}${productCard('Selene satin','M · Váy dạ hội', Math.max(3, branch.available - 3),`Từ ${formatVnd(branch.packages[0].price + 30000)}`,'black')}${productCard('Luna corset','S · M · Váy dự tiệc', '3',`Từ ${formatVnd(branch.packages[0].price + 40000)}`,'cream')}</section><section class="card" style="margin-top:16px"><div class="card-heading"><h2>Mã cần chú ý · ${branch.code}</h2><a href="#">Xem tất cả</a></div><div class="task-list"><div class="task"><i class="task-dot gold"></i><div class="task-copy"><strong>${branch.code}-AF-GAM-L-01 đang vệ sinh</strong><span>Hoàn thành lúc 02:00 ngày mai</span></div>${badge('Cleaning', 'cleaning')}</div><div class="task"><i class="task-dot"></i><div class="task-copy"><strong>${branch.code}-SE-SAT-M-03 chờ kiểm tra</strong><span>Chỉ hiển thị nghiệp vụ của ${branch.city}</span></div>${badge('Chờ hoàn', 'refund')}</div></div></section>`
 }
 
 function productAddView() {
-  return `${pageHeader('Thêm sản phẩm', 'Tạo mẫu sản phẩm trước, sau đó khai báo size và từng mã đồ vật lý.', `<button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu sản phẩm</button>`)}
+  const branch = currentBranch()
+  return `${pageHeader('Thêm sản phẩm', `Khai báo tồn kho và giá cho ${branch.name}.`, `<button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu sản phẩm</button>`)}
+  ${branchScopeBar()}
   <div class="product-editor-layout"><section class="card"><div class="card-heading"><div><h2>Thông tin mẫu</h2><p>Mỗi mẫu có thể có nhiều size và mã đồ riêng.</p></div></div><div class="form-section"><div class="upload-area"><span>♧</span><strong>Thêm ảnh sản phẩm</strong><small>Kéo ảnh vào đây hoặc chọn từ thiết bị · PNG, JPG tối đa 10MB</small><button class="button secondary small" data-action="upload-product-image">Chọn ảnh</button></div><div class="form-grid"><div class="field"><label>Tên sản phẩm <b>*</b></label><input class="text-input" placeholder="Ví dụ: Afrodille gấm" /></div><div class="field"><label>Danh mục <b>*</b></label><select class="text-input"><option>Váy dạ hội</option><option>Váy dự tiệc</option><option>Phụ kiện</option></select></div><div class="field"><label>Mã mẫu</label><input class="text-input" placeholder="Tự tạo từ tên, ví dụ AF-GAM" /></div><div class="field"><label>Giá trị thay thế <b>*</b></label><input class="text-input" value="1.200.000đ" inputmode="numeric" /></div></div><div class="field"><label>Mô tả / lưu ý cho staff</label><textarea class="text-input" placeholder="Chất liệu, cách bảo quản hoặc lưu ý khi tư vấn..." style="height:76px;padding-top:10px"></textarea></div></div></section><aside class="grid"><section class="card"><div class="card-heading"><h2>Thiết lập vận hành</h2></div><div class="card-body"><div class="field"><label>Thời gian vệ sinh sau trả</label><select class="text-input"><option>12 giờ</option><option>24 giờ</option><option>48 giờ</option></select></div><div class="field"><label>Trạng thái khi tạo</label><select class="text-input"><option>Đang hoạt động</option><option>Tạm ẩn</option></select></div><p class="side-note">Giá thuê được thiết lập theo từng size ở phần bên dưới.</p></div></section></aside></div>
-  <section class="card variant-editor"><div class="card-heading"><div><h2>Size, giá thuê & mã vật lý</h2><p>Số lượng được tính từ các mã đồ. Không nhập số lượng thủ công.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-form"><div class="form-grid three"><div class="field"><label>Size <b>*</b></label><input class="text-input" value="S" /></div><div class="field"><label>Số đo</label><input class="text-input" value="84 × 64–66 × 88" /></div><div class="field"><label>SKU</label><input class="text-input" value="AF-GAM-S" /></div></div><div class="price-grid"><div class="field"><label>Giá thuê 12 giờ</label><input class="text-input" value="190.000đ" /></div><div class="field"><label>Giá thuê 1 ngày</label><input class="text-input" value="220.000đ" /></div><div class="field"><label>Giá thuê 3 ngày</label><input class="text-input" value="320.000đ" /></div></div><div class="asset-code-entry"><div><strong>Mã đồ vật lý</strong><span>Mỗi mã là một chiếc đồ riêng, không được trùng.</span></div><div class="asset-chips"><span>AF-GAM-S-01 <button aria-label="Xóa mã">×</button></span><span>AF-GAM-S-02 <button aria-label="Xóa mã">×</button></span><button class="add-code" data-action="add-asset-code">＋ Thêm mã</button></div></div></div></section><div class="mobile-product-actions"><button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu sản phẩm</button></div>`
+  <section class="card variant-editor"><div class="card-heading"><div><h2>Size, giá thuê & mã vật lý</h2><p>Bảng giá và mã kho bên dưới chỉ thuộc ${branch.city}.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-form"><div class="form-grid three"><div class="field"><label>Size <b>*</b></label><input class="text-input" value="S" /></div><div class="field"><label>Số đo</label><input class="text-input" value="84 × 64–66 × 88" /></div><div class="field"><label>SKU</label><input class="text-input" value="AF-GAM-S" /></div></div><div class="price-grid">${branch.packages.map(item => `<div class="field"><label>Giá thuê ${item.label}</label><input class="text-input" value="${formatVnd(item.price)}" /></div>`).join('')}</div><div class="asset-code-entry"><div><strong>Mã đồ vật lý · ${branch.code}</strong><span>Mỗi mã thuộc đúng một chi nhánh.</span></div><div class="asset-chips"><span>${branch.assets[0]} <button aria-label="Xóa mã">×</button></span><span>${branch.assets[1]} <button aria-label="Xóa mã">×</button></span><button class="add-code" data-action="add-asset-code">＋ Thêm mã</button></div></div></div></section><div class="mobile-product-actions"><button class="button secondary" data-view="products">Hủy</button><button class="button" data-action="save-product">Lưu tại ${branch.code}</button></div>`
 }
 
 function productDetailView() {
-  const assets = [['AF-GAM-S-01','Đang thuê','renting','14–17 Thg 9 · Thu Hà'],['AF-GAM-S-02','Giữ slot','pending','14–17 Thg 9 · Ngọc Anh'],['AF-GAM-S-03','Có sẵn','available','Đã vệ sinh 12 Thg 9'],['AF-GAM-L-01','Cleaning','cleaning','Sẵn sàng lúc 02:00 ngày mai']]
-  return `${pageHeader('Afrodille gấm', 'Mã mẫu AF-GAM · Váy dạ hội', `<button class="button secondary" data-view="products">← Kho sản phẩm</button><button class="button" data-action="edit-product">Chỉnh sửa</button>`)}
-  <div class="product-detail-hero"><section class="card product-showcase"><div class="product-hero-image">♧</div><div class="product-hero-copy"><div>${badge('Đang hoạt động', 'available')}</div><h2>Afrodille gấm</h2><p>Váy dạ hội · Gấm hoa · Cần vệ sinh 12 giờ sau khi trả.</p><div class="product-kpis"><span><b>4</b> mã đang hoạt động</span><span><b>2</b> size</span><span><b>190.000đ</b> giá từ</span></div></div></section><aside class="card detail-note"><div class="card-heading"><h2>Giá trị & chính sách</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Giá trị thay thế</span><strong>1.200.000đ</strong></div><div class="info-line"><span>Phụ thu từ ngày 4</span><strong>10% giá 1 ngày</strong></div><div class="info-line"><span>Thời gian vệ sinh</span><strong>12 giờ</strong></div></div></div></aside></div>
-  <section class="card" style="margin-top:16px"><div class="card-heading"><div><h2>Biến thể & bảng giá</h2><p>Giá đang áp dụng cho các reservation/đơn tạo mới.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-table"><div class="variant-row variant-head"><span>Size / số đo</span><span>12 giờ</span><span>1 ngày</span><span>3 ngày</span><span>Mã vật lý</span></div><div class="variant-row"><div><strong>S</strong><small>84 × 64–66 × 88</small></div><span>190.000đ</span><span>220.000đ</span><span>320.000đ</span><button class="inline-link" data-action="show-size-assets">3 mã ›</button></div><div class="variant-row"><div><strong>L</strong><small>92 × 72–74 × 96</small></div><span>190.000đ</span><span>220.000đ</span><span>320.000đ</span><button class="inline-link" data-action="show-size-assets">1 mã ›</button></div></div></section>
+  const branch = currentBranch()
+  const assets = [[branch.assets[0],'Đang thuê','renting','14–17 Thg 9 · Thu Hà'],[branch.assets[1],'Giữ slot','pending','14–17 Thg 9 · Ngọc Anh'],[branch.assets[2],'Có sẵn','available','Đã vệ sinh 12 Thg 9'],[`${branch.code}-AF-GAM-L-01`,'Cleaning','cleaning','Sẵn sàng lúc 02:00 ngày mai']]
+  const priceCells = offset => branch.packages.map(item => `<span>${formatVnd(item.price + offset)}</span>`).join('')
+  return `${pageHeader('Afrodille gấm', `Mã mẫu AF-GAM · ${branch.name}`, `<button class="button secondary" data-view="products">← Kho sản phẩm</button><button class="button" data-action="edit-product">Chỉnh sửa</button>`)}
+  ${branchScopeBar()}<div class="product-detail-hero"><section class="card product-showcase"><div class="product-hero-image">♧</div><div class="product-hero-copy"><div>${badge('Đang hoạt động', 'available')}</div><h2>Afrodille gấm</h2><p>Váy dạ hội · Gấm hoa · Cần vệ sinh 12 giờ sau khi trả.</p><div class="product-kpis"><span><b>${branch.available}</b> mã tại ${branch.code}</span><span><b>2</b> size</span><span><b>${formatVnd(branch.packages[0].price)}</b> giá từ</span></div></div></section><aside class="card detail-note"><div class="card-heading"><h2>Giá trị & chính sách</h2></div><div class="card-body"><div class="info-list"><div class="info-line"><span>Giá trị thay thế</span><strong>1.200.000đ</strong></div><div class="info-line"><span>Chi nhánh</span><strong>${branch.city}</strong></div><div class="info-line"><span>Thời gian vệ sinh</span><strong>12 giờ</strong></div></div></div></aside></div>
+  <section class="card" style="margin-top:16px"><div class="card-heading"><div><h2>Bảng giá · ${branch.code}</h2><p>Chỉ áp dụng cho reservation mới tại ${branch.city}.</p></div><button class="button secondary small" data-action="add-variant">＋ Thêm size</button></div><div class="variant-table"><div class="variant-row variant-head"><span>Size / số đo</span>${branch.packages.map(item => `<span>${item.label}</span>`).join('')}<span>Mã vật lý</span></div><div class="variant-row"><div><strong>S</strong><small>84 × 64–66 × 88</small></div>${priceCells(0)}<button class="inline-link" data-action="show-size-assets">${branch.assets.length} mã ›</button></div><div class="variant-row"><div><strong>L</strong><small>92 × 72–74 × 96</small></div>${priceCells(20000)}<button class="inline-link" data-action="show-size-assets">1 mã ›</button></div></div></section>
   <section class="card" style="margin-top:16px"><div class="card-heading"><div><h2>Mã đồ vật lý</h2><p>Theo dõi tình trạng từng chiếc để tránh double-book.</p></div><button class="button secondary small" data-action="add-asset-code">＋ Thêm mã</button></div><div class="asset-detail-list">${assets.map(asset => `<div class="asset-detail-row"><span class="product-thumb">♧</span><div><strong>${asset[0]}</strong><small>${asset[3]}</small></div>${badge(asset[1], asset[2])}<button class="inline-link" data-action="view-asset-history">Lịch sử</button></div>`).join('')}</div></section>`
 }
 
 function placeholderView(title) { return `${pageHeader(title, 'Module này được để làm khung trong bản mockup hiện tại.')}<section class="card empty-view"><div><div class="empty-illustration">◔</div><h2>Đang chờ thiết kế chi tiết</h2><p>Ở bước phát triển tiếp theo, màn hình này sẽ dùng dữ liệu thật từ hệ thống Aura Rental.</p></div></section>` }
 
 function compactDashboardView() {
-  return `${pageHeader('Hôm nay', 'Thứ Bảy, 14 Thg 9')}
-  <div class="quick-actions"><button class="quick-action" data-view="orders"><b>3</b><span>Chờ cọc</span></button><button class="quick-action" data-view="schedule"><b>2</b><span>Giữ chỗ</span></button><button class="quick-action" data-view="returns"><b>1</b><span>Trả đồ</span></button></div>
-  <section class="card next-job"><span class="eyebrow">VIỆC TIẾP THEO</span><h2>Xác nhận cọc · Ngọc Anh</h2><p>500.000đ · Afrodille gấm S</p><button class="button full" data-view="orders">Mở đơn</button></section>
-  <section class="card compact-list"><div class="card-heading"><h2>Hôm nay</h2></div><button class="compact-row" data-view="orders"><i class="task-dot"></i><span><strong>Ngọc Anh</strong><small>Chờ cọc</small></span><b>500k</b><em>›</em></button><button class="compact-row" data-view="schedule"><i class="task-dot gold"></i><span><strong>Thu Hà</strong><small>Giao lúc 13:00</small></span><b>Giao</b><em>›</em></button><button class="compact-row" data-view="returns"><i class="task-dot green"></i><span><strong>Bảo Trâm</strong><small>Nhận trả lúc 16:30</small></span><b>Trả</b><em>›</em></button></section>
+  const branch = currentBranch()
+  const branchOrders = orders.filter(order => order.branch === branch.id)
+  const nextOrder = branchOrders[0]
+  return `${pageHeader('Hôm nay', `Chủ Nhật, 21 Thg 9 · ${branch.city}`)}
+  ${branchScopeBar()}
+  <div class="quick-actions"><button class="quick-action" data-view="orders"><b>${branchOrders.filter(order => order.tone === 'pending').length}</b><span>Chờ cọc</span></button><button class="quick-action" data-view="schedule"><b>${branch.holds}</b><span>Giữ chỗ</span></button><button class="quick-action" data-view="returns"><b>1</b><span>Trả đồ</span></button></div>
+  <section class="card next-job"><span class="eyebrow">VIỆC TIẾP THEO · ${branch.code}</span><h2>Xác nhận cọc · ${nextOrder.name}</h2><p>${nextOrder.deposit} · ${nextOrder.item}</p><button class="button full" data-view="orders">Mở đơn</button></section>
+  <section class="card compact-list"><div class="card-heading"><h2>Hôm nay · ${branch.city}</h2></div>${branchOrders.map((order, index) => `<button class="compact-row" data-view="orders"><i class="task-dot ${index ? 'gold' : ''}"></i><span><strong>${order.name}</strong><small>${order.status} · ${order.item}</small></span><b>${order.deposit.replace('.000đ','k')}</b><em>›</em></button>`).join('')}<button class="compact-row" data-view="returns"><i class="task-dot green"></i><span><strong>${state.branchId === 'saigon' ? 'Uyên Nhi' : 'Bảo Trâm'}</strong><small>Nhận trả lúc 16:30</small></span><b>Trả</b><em>›</em></button></section>
   <button class="soft-action" data-view="issue-form">＋ Tạo giữ chỗ mới</button>`
 }
 
 function compactScheduleView() {
-  return `${pageHeader('Tìm đồ trống', 'Chọn ngày, tìm mã')}
+  const branch = currentBranch()
+  return `${pageHeader('Tìm đồ trống', `Tồn kho và giá tại ${branch.city}`)}
+  ${branchScopeBar()}
   <section class="card compact-search"><div class="field"><label>Váy / mã</label><input class="text-input" value="Afrodille gấm" /></div><div class="compact-dates"><div class="field"><label>Nhận</label><input class="text-input" value="14/09" /></div><div class="field"><label>Trả</label><input class="text-input" value="17/09" /></div></div><button class="button full" data-action="search-availability">Tìm mã trống</button></section>
-  <section class="card compact-list"><div class="card-heading"><h2>Afrodille gấm · S</h2>${badge('12 mã trống', 'available')}</div><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-03</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-05</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button><button class="asset-pick" data-view="issue-form"><span class="asset-status-dot"></span><div><strong>AF-GAM-S-09</strong><small>Trống 14–17/09</small></div><b>Chọn</b></button></section>
-  <section class="card compact-list"><div class="card-heading"><h2>Kho</h2><button class="inline-link" data-action="toggle-schedule-details">${state.scheduleExpanded ? 'Ẩn mã' : 'Xem mã'}</button></div><div class="stock-mini"><span>Afrodille gấm S</span><b>12 trống · 4 thuê</b></div><div class="stock-mini"><span>Afrodille gấm L</span><b>8 trống · 3 thuê</b></div><div class="stock-mini"><span>Selene satin M</span><b>10 trống · 5 thuê</b></div>${state.scheduleExpanded ? `<div class="tiny-timeline">AF-GAM-S-02 <span>Hold · Ngọc Anh</span></div>` : ''}</section>`
+  <section class="card compact-list"><div class="card-heading"><div><h2>Afrodille gấm · S</h2><p class="card-subtitle">Chỉ mã thuộc ${branch.code}</p></div>${badge(`${branch.available} mã trống`, 'available')}</div>${branch.assets.map(code => `<button class="asset-pick" data-action="select-asset" data-asset-code="${code}"><span class="asset-status-dot"></span><div><strong>${code}</strong><small>Trống 14–17/09 · ${branch.city}</small></div><b>Chọn</b></button>`).join('')}</section>
+  <section class="card branch-price-card"><div class="card-heading"><div><h2>Bảng giá ${branch.city}</h2><p class="card-subtitle">Giá Afrodille gấm · Size S</p></div></div><div class="branch-price-grid">${branch.packages.map(item => `<div><span>${item.label}</span><strong>${formatVnd(item.price)}</strong></div>`).join('')}</div></section>
+  <section class="card compact-list"><div class="card-heading"><h2>Kho ${branch.code}</h2><button class="inline-link" data-action="toggle-schedule-details">${state.scheduleExpanded ? 'Ẩn mã' : 'Xem mã'}</button></div><div class="stock-mini"><span>Afrodille gấm S</span><b>${branch.available} trống · ${branch.renting} thuê</b></div><div class="stock-mini"><span>Afrodille gấm L</span><b>${Math.max(2, branch.available - 3)} trống · 2 thuê</b></div><div class="stock-mini"><span>Selene satin M</span><b>${Math.max(3, branch.available - 2)} trống · 3 thuê</b></div>${state.scheduleExpanded ? `<div class="tiny-timeline">${branch.assets[0]} <span>Kho ${branch.city}</span></div>` : ''}</section>`
 }
 
 function compactReservationView() {
-  if (state.issueComplete) return `${pageHeader('Link đã sẵn sàng', 'Gửi cho khách')}
-  <section class="card compact-result"><span class="success-icon">✓</span><h2>Ngọc Anh</h2><div class="code-box"><div class="code-row"><span>Mã váy</span><strong>AF-GAM-S-02</strong></div><div class="code-row"><span>OTP</span><strong>482 917</strong></div><div class="code-row"><span>Còn lại</span><strong>500.000đ</strong></div></div><button class="button full" data-action="copy-link">Sao chép link</button><button class="button secondary full" style="margin-top:8px" data-action="preview-form">Xem form khách</button></section>`
-  return `${pageHeader('Giữ chỗ', 'Tạo link cho khách')}
-  <section class="card compact-form"><div class="mini-steps"><b>1</b><i></i><b class="active">2</b><i></i><b>3</b></div><div class="field"><label>Khách</label><input class="text-input" value="Ngọc Anh · 0908 123 456" /></div><div class="field"><label>Đồ đã chọn</label><button class="select-card" data-view="schedule">Afrodille gấm · S <span>AF-GAM-S-02</span></button></div><div class="compact-dates"><div class="field"><label>Nhận</label><input class="text-input" value="14/09 · 14:00" /></div><div class="field"><label>Trả</label><input class="text-input" value="17/09 · 14:00" /></div></div><div class="deposit-toggle"><button class="active">Đã cọc 100k</button><button>Cọc đủ</button></div><div class="compact-total"><span>Còn cần cọc</span><strong>500.000đ</strong></div><button class="button full" data-action="generate-code">Tạo link & OTP</button></section>`
+  const branch = currentBranch()
+  const rentalPackage = currentPackage()
+  if (state.issueComplete) return `${pageHeader('Link đã sẵn sàng', `Đơn giữ tại ${branch.city}`)}
+  ${branchScopeBar()}<section class="card compact-result"><span class="success-icon">✓</span><h2>Ngọc Anh</h2><div class="code-box"><div class="code-row"><span>Chi nhánh</span><strong>${branch.name}</strong></div><div class="code-row"><span>Mã váy</span><strong>${state.selectedAsset}</strong></div><div class="code-row"><span>Gói thuê</span><strong>${rentalPackage.label} · ${formatVnd(rentalPackage.price)}</strong></div><div class="code-row"><span>OTP</span><strong>482 917</strong></div><div class="code-row"><span>Còn lại</span><strong>500.000đ</strong></div></div><button class="button full" data-action="copy-link">Sao chép link</button><button class="button secondary full" style="margin-top:8px" data-action="preview-form">Xem form khách</button></section>`
+  return `${pageHeader('Giữ chỗ', `Giá và tồn kho ${branch.city}`)}
+  ${branchScopeBar()}
+  <section class="card compact-form"><div class="mini-steps"><b>1</b><i></i><b class="active">2</b><i></i><b>3</b></div><div class="field"><label>Khách</label><input class="text-input" value="Ngọc Anh · 0908 123 456" /></div><div class="field"><label>Đồ đã chọn</label><button class="select-card" data-view="schedule">Afrodille gấm · S <span>${state.selectedAsset}</span></button></div><div class="compact-dates"><div class="field"><label>Nhận</label><input class="text-input" value="14/09 · 14:00" /></div><div class="field"><label>Trả</label><input class="text-input" value="17/09 · 14:00" /></div></div><div class="field"><label>Gói thuê tại ${branch.city}</label><div class="rental-package-options">${branch.packages.map(item => `<button class="${rentalPackage.code === item.code ? 'active' : ''}" data-action="select-rental-package" data-package-code="${item.code}"><span>${item.label}</span><strong>${formatVnd(item.price)}</strong></button>`).join('')}</div></div><div class="compact-total"><span>Giá thuê · ${rentalPackage.label}</span><strong>${formatVnd(rentalPackage.price)}</strong></div><div class="deposit-toggle"><button class="active">Đã cọc 100k</button><button>Cọc đủ</button></div><div class="reservation-balance"><span>Còn cần cọc</span><strong>500.000đ</strong></div><button class="button full" data-action="generate-code">Giữ mã tại ${branch.code} & tạo OTP</button></section>`
 }
 
 function compactOrdersView() {
-  return `${pageHeader('Đơn hàng', '3 đơn cần xử lý')}
+  const branch = currentBranch()
+  const branchOrders = orders.filter(order => order.branch === branch.id)
+  return `${pageHeader('Đơn hàng', `${branchOrders.length} đơn tại ${branch.city}`)}
+  ${branchScopeBar()}
   <div class="simple-filter"><button class="active">Cần xử lý</button><button>Tất cả</button><button data-view="schedule">Tìm đồ</button></div>
-  <section class="order-cards">${orders.map(order => `<button class="order-card" data-order="${order.id}"><div><span class="order-code">${order.id}</span>${badge(order.status, order.tone)}</div><strong>${order.name}</strong><span>${order.item}</span><footer>${order.date}<b>›</b></footer></button>`).join('')}</section>`
+  <section class="order-cards">${branchOrders.map(order => `<button class="order-card" data-order="${order.id}"><div><span class="order-code">${order.id}</span>${badge(order.status, order.tone)}</div><strong>${order.name}</strong><span>${order.item}</span><footer><span>${order.date}</span><span>${branch.code} <b>›</b></span></footer></button>`).join('')}</section>`
 }
 
 function compactReturnsView() {
@@ -268,8 +316,8 @@ function compactReturnsView() {
     ? `<div class="field"><label for="refund-adjustment-reason">Lý do điều chỉnh <small>(bắt buộc)</small></label><textarea id="refund-adjustment-reason" class="text-input" rows="3" placeholder="Ví dụ: đối chiếu lại tình trạng đồ, bỏ phí xử lý"></textarea></div><button class="button full" data-action="approve-refund">✓ Duyệt lại ${formatVnd(data.refund)}</button><button class="button secondary full" data-action="cancel-refund-adjustment">Hủy điều chỉnh</button><p class="refund-help">Ảnh mới chỉ được tạo sau khi duyệt lại. Nếu đã gửi ảnh cũ, hãy gửi lại ảnh mới cho khách.</p>`
     : `<button class="button full" disabled>Manager đang điều chỉnh</button><p class="refund-help">Chờ manager duyệt lại để lấy ảnh tổng kết mới.</p>`
   if (approved) action = `<div class="refund-approved-note"><span>✓</span><div><strong>Quỳnh Anh đã duyệt ${data.additionalCollection ? `cần thu ${formatVnd(data.additionalCollection)}` : `hoàn ${formatVnd(data.refund)}`}</strong></div></div>${!completed && manager ? `<button class="button full" data-action="confirm-refund-transfer">${data.additionalCollection ? 'Xác nhận đã thu thêm từ khách' : 'Xác nhận đã chuyển khoản hoàn khách'}</button><button class="button secondary full" data-action="adjust-refund">Điều chỉnh & duyệt lại</button>` : ''}<p class="refund-help">${completed ? 'Đã ghi nhận đối soát. Mã đồ chuyển sang Cleaning 12 giờ.' : data.additionalCollection ? 'Xác nhận sau khi đã thu đủ khoản chênh lệch từ khách.' : 'Ảnh hiện ghi “Chờ chuyển khoản”. Xác nhận chuyển khoản sẽ cập nhật ảnh thành “Đã hoàn tiền”.'}</p>`
-  return `${pageHeader('Trả đồ & hoàn tiền', `${data.customer} · ${data.id}`)}
-  <div class="refund-demo-toolbar"><span>Xem luồng demo theo vai trò</span><div class="segmented"><button data-refund-role="staff" class="${manager ? '' : 'active'}" aria-pressed="${!manager}">Staff</button><button data-refund-role="manager" class="${manager ? 'active' : ''}" aria-pressed="${manager}">Manager</button></div></div>
+  return `${pageHeader('Trả đồ & hoàn tiền', `${data.customer} · ${data.id} · ${currentBranch().code}`)}
+  ${branchScopeBar()}<div class="refund-demo-toolbar"><span>Xem luồng demo theo vai trò</span><div class="segmented"><button data-refund-role="staff" class="${manager ? '' : 'active'}" aria-pressed="${!manager}">Staff</button><button data-refund-role="manager" class="${manager ? 'active' : ''}" aria-pressed="${manager}">Manager</button></div></div>
   <ol class="refund-steps"><li class="${draft || adjusting ? 'current' : 'done'}"><b>1</b><span>Kiểm tra & đối soát</span></li><li class="${approved ? 'done' : pending ? 'current' : ''}"><b>2</b><span>Manager duyệt</span></li><li class="${approved ? 'current' : ''}"><b>3</b><span>Ảnh gửi khách</span></li></ol>
   <div class="refund-workspace"><div class="refund-operation-column">
     <section class="card refund-inspection"><div class="card-heading"><div><h2>Kiểm tra từng món trả về</h2><p class="card-subtitle">Chọn tình trạng, lưu bằng chứng và hướng xử lý kho.</p></div>${badge(status, approved ? 'available' : 'pending')}</div><div class="card-body inspection-list">
@@ -288,6 +336,7 @@ function compactReturnsView() {
 
 function render() {
   breadcrumb.textContent = labels[state.view]
+  activeBranchName.textContent = currentBranch().name
   const views = { dashboard: compactDashboardView, schedule: compactScheduleView, 'issue-form': compactReservationView, orders: compactOrdersView, returns: compactReturnsView, products: productsView, 'product-add': productAddView, 'product-detail': productDetailView, 'order-detail': orderDetailWithIdentityView, reports: () => placeholderView('Báo cáo'), settings: () => placeholderView('Cấu hình') }
   root.dataset.currentView = state.view
   delete root.dataset.view
@@ -336,16 +385,23 @@ function downloadRefundImage() {
   if (!['approved', 'completed'].includes(state.refundStatus)) return
   const link = document.createElement('a')
   link.href = AuraRefundReceipt.create(refundData(), state.refundStatus).toDataURL('image/png')
-  link.download = `Aura-Rental-${returnOrder.id}-v${refundData().revision || 1}-${state.refundStatus}.png`
+  link.download = `Aura-Rental-${refundData().id}-v${refundData().revision || 1}-${state.refundStatus}.png`
   document.body.append(link)
   link.click()
   link.remove()
 }
 
 function openCustomerForm() {
-  modal.innerHTML = `<div class="modal-header"><div><h2>Preview — Form khách thuê</h2><p>Đây là màn khách mở từ link OTP staff gửi.</p></div><button class="close-modal" data-action="close-modal">×</button></div><div class="modal-body"><form class="customer-form" id="customer-form"><div class="customer-top"><div class="brand-mark">A</div><div><strong>Aura Rental</strong><span>Xác nhận thông tin thuê</span></div></div><div class="form-summary"><strong>Afrodille gấm · Size S</strong><span>Mã váy AF-GAM-S-02 · 14/09 → 17/09 · Gói cọc 50% + CCCD</span></div><div class="field"><label>OTP được shop gửi</label><input class="text-input" value="482 917" inputmode="numeric" /></div><div class="field"><label>Họ và tên</label><input class="text-input" value="Ngọc Anh" /></div><div class="field"><label>Số điện thoại</label><input class="text-input" value="090 812 34 56" /></div><div class="field"><label>Địa chỉ nhận / trả đồ</label><textarea class="text-input" style="height:64px;padding-top:10px">112 Võ Văn Tần, Phường 6, Quận 3, TP.HCM</textarea></div><div class="field"><label>Ảnh CCCD <small>(bắt buộc cho gói 50%)</small></label><button class="button secondary" type="button">⌁ Tải ảnh CCCD (mock)</button></div><div class="form-message">Sau khi gửi, hệ thống kiểm tra OTP, mã đồ, hold và lịch trống. Đơn chỉ được tạo nếu mọi thông tin hợp lệ.</div><button class="button full" style="margin-top:15px" type="submit">Gửi form xác nhận</button></form></div>`
+  const branch = currentBranch()
+  const rentalPackage = currentPackage()
+  modal.innerHTML = `<div class="modal-header"><div><h2>Preview — Form khách thuê</h2><p>Đây là màn khách mở từ link OTP staff gửi.</p></div><button class="close-modal" data-action="close-modal">×</button></div><div class="modal-body"><form class="customer-form" id="customer-form"><div class="customer-top"><div class="brand-mark">A</div><div><strong>Aura Rental</strong><span>${branch.name}</span></div></div><div class="form-summary"><strong>Afrodille gấm · Size S</strong><span>${state.selectedAsset} · ${rentalPackage.label} / ${formatVnd(rentalPackage.price)} · 14/09 → 17/09</span></div><div class="field"><label>OTP được shop gửi</label><input class="text-input" value="482 917" inputmode="numeric" /></div><div class="field"><label>Họ và tên</label><input class="text-input" value="Ngọc Anh" /></div><div class="field"><label>Số điện thoại</label><input class="text-input" value="090 812 34 56" /></div><div class="field"><label>Địa chỉ nhận / trả đồ</label><textarea class="text-input" style="height:64px;padding-top:10px">112 Võ Văn Tần, Phường 6, Quận 3, TP.HCM</textarea></div><div class="field"><label>Ảnh CCCD <small>(bắt buộc cho gói 50%)</small></label><button class="button secondary" type="button">⌁ Tải ảnh CCCD (mock)</button></div><div class="form-message">Đơn được giữ tại ${branch.city}. Hệ thống kiểm tra OTP, mã đồ và lịch trống đúng chi nhánh trước khi tạo đơn.</div><button class="button full" style="margin-top:15px" type="submit">Gửi form xác nhận</button></form></div>`
   const identityField = [...modal.querySelectorAll('.field')].find(field => field.textContent.includes('Ảnh CCCD'))
   identityField.outerHTML = `<div class="form-message">Với gói cọc 50%, shop sẽ nhận và kiểm tra CCCD qua Instagram. Form này không thu thập hoặc lưu CCCD.</div>`
+  modalBackdrop.hidden = false
+}
+
+function openBranchPicker() {
+  modal.innerHTML = `<div class="modal-header"><div><h2>Chọn chi nhánh làm việc</h2><p>Tồn kho, lịch và bảng giá sẽ đổi theo chi nhánh.</p></div><button class="close-modal" data-action="close-modal">×</button></div><div class="modal-body branch-picker-list">${Object.values(branches).map(branch => `<button class="branch-picker-option ${branch.id === state.branchId ? 'active' : ''}" data-action="select-branch" data-branch-id="${branch.id}"><span class="branch-picker-code">${branch.code}</span><span><strong>${branch.name}</strong><small>${branch.address}</small><em>${branch.available} mã trống · Gói ${branch.packages.map(item => item.code).join(' / ')}</em></span><b>${branch.id === state.branchId ? '✓' : '›'}</b></button>`).join('')}</div>`
   modalBackdrop.hidden = false
 }
 
@@ -407,7 +463,25 @@ document.addEventListener('click', event => {
   }
   if (action === 'forgot-password') { event.preventDefault(); showToast('Mockup: yêu cầu đặt lại mật khẩu sẽ được gửi tới email công việc.') }
   if (action === 'logout') { logout(); return }
-  if (action === 'generate-code') { state.issueComplete = true; render(); showToast('Đã tạo OTP và link form cho Ngọc Anh.') }
+  if (action === 'open-branch-picker') { openBranchPicker(); return }
+  if (action === 'select-branch') {
+    state.branchId = event.target.closest('[data-action]').dataset.branchId
+    state.rentalPackage = currentBranch().packages[0].code
+    state.selectedAsset = currentBranch().assets[0]
+    state.issueComplete = false
+    state.refundStatus = 'draft'
+    state.refundSnapshot = null
+    closeModal()
+    render()
+    showToast(`Đã chuyển sang ${currentBranch().name}. Tồn kho và bảng giá đã được cập nhật.`)
+    return
+  }
+  if (action === 'select-rental-package') {
+    state.rentalPackage = event.target.closest('[data-action]').dataset.packageCode
+    render()
+    return
+  }
+  if (action === 'generate-code') { state.issueComplete = true; render(); showToast(`Đã giữ ${state.selectedAsset} tại ${currentBranch().code} và tạo OTP.`) }
   if (action === 'restart-issue') { state.issueComplete = false; render() }
   if (action === 'copy-link') { showToast('Đã sao chép nội dung gửi khách (mockup).') }
   if (action === 'preview-form') openCustomerForm()
@@ -473,8 +547,13 @@ document.addEventListener('click', event => {
   }
   if (action === 'copy-refund-image') copyRefundImage(event.target.closest('[data-action]'))
   if (action === 'download-refund-image') downloadRefundImage()
-  if (action === 'search-availability') { showToast('Đã tìm 12 mã trống cho khoảng thời gian đã chọn.') }
-  if (action === 'select-asset') { showToast('Đã chọn AF-GAM-S-03. Tiếp tục cấp mã và link form cho khách.') }
+  if (action === 'search-availability') { showToast(`Đã tìm ${currentBranch().available} mã trống tại ${currentBranch().name}.`) }
+  if (action === 'select-asset') {
+    state.selectedAsset = event.target.closest('[data-action]').dataset.assetCode
+    state.view = 'issue-form'
+    render()
+    showToast(`Đã chọn ${state.selectedAsset} tại ${currentBranch().code}.`)
+  }
   if (action === 'toggle-schedule-details') { state.scheduleExpanded = !state.scheduleExpanded; render() }
   if (action === 'show-operations') { showToast('Mockup: mở danh sách 18 việc vận hành cần xử lý hôm nay.') }
   if (action === 'open-all-assets') { showToast('Mockup: danh sách sẽ dùng virtual scroll và chỉ tải theo nhóm đã chọn.') }

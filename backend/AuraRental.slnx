@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AuraRental.Domain/AuraRental.Domain.csproj" />
+  <Project Path="AuraRental.Service/AuraRental.Service.csproj" />
+  <Project Path="AuraRental.WebAPI/AuraRental.WebAPI.csproj" />
+</Solution>

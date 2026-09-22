@@ -9,6 +9,8 @@
 node_modules/
 dist/
 coverage/
+bin/
+obj/
 
 # Editors and operating systems
 .idea/

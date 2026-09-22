@@ -1,6 +1,32 @@
 # Database tối giản — Aura Rental
 
-Chỉ **13 bảng dữ liệu nghiệp vụ**, không trigger, stored function, bảng audit/outbox hoặc bảng tài liệu PNG. [schema.sql](schema.sql) chỉ có bảng, thuộc tính, primary key, foreign key và unique cơ bản; chưa áp dụng lên database thật.
+## Dữ liệu development
+
+Sau khi chạy `schema.sql`, nạp bộ dữ liệu test bằng:
+
+```bash
+docker exec -i postgres-db-1 psql -v ON_ERROR_STOP=1 -U postgres -d aura_rental < database/seed.sql
+```
+
+`seed.sql` dùng UUID cố định và UPSERT nên có thể chạy lại mà không nhân bản dữ liệu. File không xóa dữ liệu được tạo thủ công. Bộ seed gồm hai chi nhánh, ba tài khoản, catalog và giá `1D/2D/3D` theo từng chi nhánh, cùng reservation/order/refund ở nhiều trạng thái.
+
+| Vai trò | Email mô phỏng | JWT `sub` |
+|---|---|---|
+| Manager | `manager@aurarental.local` | `21000000-0000-0000-0000-000000000001` |
+| Staff Hà Nội | `hanoi.staff@aurarental.local` | `21000000-0000-0000-0000-000000000002` |
+| Staff Sài Gòn | `saigon.staff@aurarental.local` | `21000000-0000-0000-0000-000000000003` |
+
+Form công khai mẫu dùng token `mock-hn-reservation-token` và OTP `123456`. Hạn token được làm mới thành 24 giờ kể từ mỗi lần chạy lại seed.
+
+Frontend development nhận JWT trực tiếp. Tạo token có hạn một giờ từ thư mục gốc:
+
+```bash
+backend/scripts/generate-dev-jwt.sh manager
+backend/scripts/generate-dev-jwt.sh hanoi
+backend/scripts/generate-dev-jwt.sh saigon
+```
+
+Có **15 bảng dữ liệu nghiệp vụ** cho multi-branch và một bảng kỹ thuật `idempotency_records`; không trigger, stored function, bảng audit/outbox hoặc bảng tài liệu PNG. [schema.sql](schema.sql) là nguồn DDL để khởi tạo database; backend không tự động chạy migration hay áp dụng file này.
 
 ## 1. Ý tưởng thiết kế
 
@@ -43,17 +69,17 @@ Mỗi dòng là một mẫu váy/phụ kiện. `image_paths` là danh sách đư
 
 ### 5. `inventory_items` — từng món đồ thật
 
-`id`, `variant_id`, `asset_code`, `status`, `cleaning_hours`, `cleaning_until`.
+`id`, `variant_id`, `branch_id`, `asset_code`, `status`, `cleaning_hours`, `cleaning_until`.
 
 Một variant có nhiều mã vật lý. `status` là `USABLE`, `MAINTENANCE`, `RETIRED`, `LOST`. `cleaning_until` cho biết cleaning tới lúc nào; `cleaning_hours` là thời lượng cleaning của mã. Không nhập quantity: đếm số dòng inventory.
 
 “Trống”, “đã giữ lịch”, “đang thuê” được backend tính từ reservation/order và thời gian, không lưu thêm một cờ để dễ bị lệch dữ liệu.
 
-### 6. `rental_prices` — giá thuê theo gói
+### 6. `branch_rental_prices` — giá thuê theo gói tại từng chi nhánh
 
-`id`, `variant_id`, `package_code`, `price`.
+`id`, `branch_id`, `variant_id`, `package_code`, `price`.
 
-`package_code` dùng `12H`, `1D`, `3D` do backend định nghĩa; không cần bảng rental packages riêng ở MVP. Mỗi variant + gói có một giá hiện tại. Manager sửa giá tại đây; giá đã chốt nằm trong reservation/order items nên đơn cũ không bị đổi.
+`package_code` dùng `1D`, `2D`, `3D`; không cần bảng rental packages riêng ở MVP. Mỗi branch + variant + gói có một giá hiện tại. Manager sửa giá tại đây; giá đã chốt nằm trong reservation/order items nên đơn cũ không bị đổi.
 
 ### 7. `settings` — cấu hình chung
 

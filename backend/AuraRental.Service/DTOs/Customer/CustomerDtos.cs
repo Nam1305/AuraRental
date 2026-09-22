@@ -1,0 +1,43 @@
+namespace AuraRental.Service.DTOs.Customer;
+
+public sealed record CustomerDto(
+    Guid Id,
+    string Name,
+    string Phone,
+    string? InstagramHandle,
+    string? Address);
+
+public sealed record CustomerListItemDto(
+    Guid Id,
+    string Name,
+    string Phone,
+    string? InstagramHandle,
+    string? Address,
+    int CompletedOrderCount,
+    DateTimeOffset? LastOrderAt);
+
+public sealed record CreateCustomerRequest(
+    string Name,
+    string Phone,
+    string? InstagramHandle,
+    string? Address);
+
+public sealed record UpdateCustomerRequest(
+    string Name,
+    string? InstagramHandle,
+    string? Address);
+
+public sealed record CustomerOrderItemDto(string ProductName, string Size, string AssetCode);
+
+public sealed record CustomerOrderHistoryDto(
+    Guid OrderId,
+    string OrderNo,
+    string BranchCode,
+    string BranchName,
+    string Status,
+    DateTimeOffset RentalStartAt,
+    DateTimeOffset RentalEndAt,
+    IReadOnlyList<CustomerOrderItemDto> Items,
+    decimal RentalFee,
+    decimal ProcessingFee,
+    DateTimeOffset CreatedAt);

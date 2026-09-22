@@ -116,7 +116,14 @@
       <main class="main-content">
         <header class="topbar">
           <button class="mobile-menu" id="mobile-menu" aria-label="Mở menu">☰</button>
-          <div class="breadcrumb" id="breadcrumb">Tổng quan</div>
+          <div class="topbar-context">
+            <div class="breadcrumb" id="breadcrumb">Tổng quan</div>
+            <button class="branch-switcher" data-action="open-branch-picker" aria-label="Đổi chi nhánh">
+              <span class="branch-dot"></span>
+              <span><small>CHI NHÁNH</small><strong id="active-branch-name">Hà Nội · Nguyễn Trãi</strong></span>
+              <b>⌄</b>
+            </button>
+          </div>
           <div class="topbar-actions">
             <button class="icon-button notification" id="notification-button" aria-label="Thông báo">♢<span>3</span></button>
             <button class="date-button" id="today-button">Hôm nay, 14 Thg 9 <span>⌄</span></button>
