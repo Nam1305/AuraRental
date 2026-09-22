@@ -26,7 +26,7 @@ X-Branch-Id: <branch-uuid>
 
 `X-Branch-Id` bắt buộc với API theo chi nhánh. Backend kiểm tra:
 
-1. Token hợp lệ và map được tới `users.auth_subject`.
+1. Token hợp lệ và claim `sub` map được tới `users.id`.
 2. User đang active.
 3. Có dòng tương ứng trong `user_branches`.
 4. Chi nhánh đang active.
@@ -105,7 +105,7 @@ Refund: DRAFT | SUBMITTED | APPROVED | SUPERSEDED | VOIDED
 
 | Màn hình | Module chính | API đọc | API thao tác |
 |---|---|---|---|
-| Đăng nhập | Auth | `GET /me` | Auth provider login |
+| Đăng nhập | Auth | `GET /me` | `POST /auth/login` |
 | Chọn chi nhánh | Branch access | `GET /me` | Không cần API nếu chỉ đổi state frontend |
 | Hôm nay | Dashboard | `GET /dashboard/today` | Điều hướng sang module liên quan |
 | Tìm đồ trống | Availability | `GET /availability` | Chọn mã để mở báo giá |
@@ -130,22 +130,22 @@ Xác định nhân viên là ai, thuộc vai trò nào và được thao tác t�
 
 ### Màn hình: Đăng nhập
 
-- Input: email, password, vai trò trên mockup chỉ để demo; bản thật lấy role từ backend.
+- Input: email hoặc username và password; role luôn lấy từ backend.
 - Thành công: lưu access token, gọi `GET /me`, xác định active branch.
 - Không cho frontend tự gán role hoặc danh sách branch.
 
 ### API: đăng nhập
 
-Authentication provider xử lý password. Nếu dùng auth gateway nội bộ, contract ngoài có thể là:
+Backend Aura Rental trực tiếp xác thực password hash và phát access token nội bộ:
 
 ```http
-POST /auth/login
+POST /api/v1/auth/login
 Content-Type: application/json
 ```
 
 ```json
 {
-  "email": "staff.hanoi@aurarental.vn",
+  "identifier": "hanoi",
   "password": "********"
 }
 ```
@@ -154,13 +154,13 @@ Content-Type: application/json
 {
   "data": {
     "accessToken": "eyJ...",
-    "refreshToken": "eyJ...",
-    "expiresIn": 3600
+    "tokenType": "Bearer",
+    "expiresAt": "2026-09-22T15:00:00Z"
   }
 }
 ```
 
-Password không lưu trong schema Aura; `users.auth_subject` map tới subject của auth provider.
+`users.password_hash` lưu hash PBKDF2 có salt, không lưu password gốc. Username và email được chuẩn hóa chữ thường. JWT có `sub = users.id`; quyền branch vẫn đọc từ database ở mỗi request.
 
 ### API: thông tin phiên đăng nhập
 
@@ -1485,7 +1485,10 @@ Response:
           "maintenance": 1,
           "lost": 0,
           "retired": 0
-        }
+        },
+        "inventoryItems": [
+          { "id": "inventory_uuid", "assetCode": "HN-AF-GAM-S-01", "status": "USABLE", "cleaningHours": 12, "cleaningUntil": null }
+        ]
       }
     ]
   }
@@ -1494,7 +1497,7 @@ Response:
 
 ### API: tạo sản phẩm và thiết lập ban đầu tại branch
 
-Manager only.
+Staff và manager đều được tạo. Backend lấy chi nhánh từ `X-Branch-Id` đã qua kiểm tra `user_branches`; giá thuê và mã vật lý trong request chỉ được ghi vào chi nhánh đó. Product/variant là catalog mẫu dùng chung, còn tồn kho và giá là dữ liệu theo chi nhánh.
 
 ```http
 POST /api/v1/products
@@ -1541,13 +1544,16 @@ PATCH /api/v1/products/{productId}
 ```json
 {
   "name": "Afrodille gấm đỏ",
+  "category": "DRESS",
+  "color": "Đỏ gấm",
+  "material": "Gấm hoa",
   "description": "Mô tả mới",
   "imagePaths": ["products/af-gam/new-cover.jpg"],
   "isActive": true
 }
 ```
 
-Metadata dùng chung toàn hệ thống nên chỉ manager cấp toàn hệ thống được sửa.
+Metadata dùng chung toàn hệ thống nên chỉ manager cấp toàn hệ thống được sửa. UI "xóa" sản phẩm gửi cùng contract với `isActive: false` (archive); không xóa cứng vì sản phẩm có thể đã xuất hiện trong lịch sử thuê. Manager có thể khôi phục bằng `isActive: true`.
 
 ### API: thêm variant/size cho sản phẩm hiện có
 
@@ -1924,7 +1930,7 @@ Các gap này không ngăn build phần đọc/search mockup, nhưng phải ch�
 
 ### Phase 1 — nền tảng và catalog
 
-1. Auth provider + `GET /me`.
+1. Local auth `POST /auth/login` + `GET /me`.
 2. Branch authorization middleware.
 3. Branch/user management tối thiểu.
 4. Product, variant, inventory item và branch price.

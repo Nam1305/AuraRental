@@ -1,50 +1,209 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useSession } from '@/features/session/SessionProvider'
 import { AsyncState } from '@/shared/components/AsyncState'
 import { formatMoney } from '@/shared/format/money'
 import { useApiQuery } from '@/shared/hooks/use-api-query'
-import { getProducts } from './catalog.api'
+import {
+  addInventoryItems,
+  addVariant,
+  createProduct,
+  getProduct,
+  getProducts,
+  replacePrices,
+  updateInventoryItem,
+  updateProduct,
+} from './catalog.api'
+import type { InventoryItem, ProductDetail, ProductVariant, VariantInput } from './catalog.types'
+
+const EMPTY_VARIANT = {
+  size: '', measurements: '', replacementValue: '', price1d: '', price2d: '', price3d: '', assetCodes: '', cleaningHours: '12',
+}
+
+const paths = (value: string) => value.split('\n').map((item) => item.trim()).filter(Boolean)
+const assetItems = (value: string, cleaningHours: string) => paths(value).map((assetCode) => ({
+  assetCode, cleaningHours: cleaningHours === '' ? null : Number(cleaningHours),
+}))
+const priceInputs = (one: string, two: string, three: string) => [
+  { packageCode: '1D', price: Number(one) },
+  ...(Number(two) > 0 ? [{ packageCode: '2D', price: Number(two) }] : []),
+  ...(Number(three) > 0 ? [{ packageCode: '3D', price: Number(three) }] : []),
+]
 
 export function CatalogPage() {
-  const { activeBranchId } = useSession()
+  const { activeBranchId, user } = useSession()
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState('true')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [version, setVersion] = useState(0)
+  const isManager = user?.role === 'MANAGER'
+  const canManageBranch = Boolean(user && activeBranchId)
+  const activeBranchName = user?.branches.find((branch) => branch.id === activeBranchId)?.name
   const products = useApiQuery(
-    () => activeBranchId ? getProducts(activeBranchId, query) : Promise.resolve([]),
-    [activeBranchId, query],
+    () => activeBranchId ? getProducts(activeBranchId, query, activeFilter) : Promise.resolve([]),
+    [activeBranchId, query, activeFilter, version],
   )
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setQuery(input.trim())
-  }
+  useEffect(() => { setSelectedId(null); setCreating(false) }, [activeBranchId])
+  const refresh = () => setVersion((value) => value + 1)
+  const submit = (event: FormEvent) => { event.preventDefault(); setQuery(input.trim()) }
 
   return (
     <section className="page-stack">
-      <header className="page-heading">
-        <span className="eyebrow">Catalog dùng chung · giá theo chi nhánh</span>
-        <h1>Kho sản phẩm</h1>
-        <p>Xem mẫu, size, số mã vật lý và giá thấp nhất ở chi nhánh đang chọn.</p>
-      </header>
-      <form className="inline-search" onSubmit={submit}>
-        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tìm tên hoặc mã mẫu" />
-        <button className="button" type="submit">Tìm</button>
-      </form>
-      <AsyncState loading={products.loading} error={products.error} empty={products.data?.length === 0}>
-        <div className="card-grid">
-          {products.data?.map((product) => (
-            <article className="panel catalog-card" key={product.id}>
-              <div className="catalog-card__code">{product.code}</div>
-              <h2>{product.name}</h2>
-              <p>Size {product.sizes.join(', ') || '—'} · {product.activeInventoryCount} mã đang quản lý</p>
-              <div className="catalog-card__footer">
-                <strong>{product.priceFrom === null ? 'Chưa có giá' : `Từ ${formatMoney(product.priceFrom)}`}</strong>
-                <span>{product.packageCodes.join(' · ')}</span>
-              </div>
-            </article>
-          ))}
+      <header className="page-heading page-heading--actions">
+        <div><span className="eyebrow">Catalog dùng chung · giá và kho theo chi nhánh</span><h1>Kho sản phẩm</h1><p>Quản lý mẫu, size, bảng giá 1D/2D/3D và từng mã đồ vật lý.</p></div>
+        <div className="heading-action">
+          <button
+            className="button button--primary"
+            disabled={!canManageBranch}
+            title="Tạo sản phẩm mới tại chi nhánh đang chọn"
+            onClick={() => { setCreating(true); setSelectedId(null) }}
+          >+ Thêm sản phẩm vào kho</button>
+          <small>Giá và mã đồ sẽ được thêm vào {activeBranchName ?? 'chi nhánh đang chọn'}.</small>
         </div>
-      </AsyncState>
+      </header>
+
+      <form className="filter-bar" onSubmit={submit}>
+        <label className="field"><span>Trạng thái</span><select value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}><option value="true">Đang kinh doanh</option><option value="false">Đã xóa/ngừng</option><option value="">Tất cả</option></select></label>
+        <div className="inline-search"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tìm tên hoặc mã mẫu" /><button className="button" type="submit">Tìm</button></div>
+      </form>
+
+      {creating && activeBranchId ? <CreateProductPanel branchId={activeBranchId} onCancel={() => setCreating(false)} onCreated={(id) => { setCreating(false); setSelectedId(id); refresh() }} /> : (
+        <div className="module-layout">
+          <AsyncState loading={products.loading} error={products.error} empty={products.data?.length === 0}>
+            <div className="result-list">
+              {products.data?.map((product) => <button type="button" className={selectedId === product.id ? 'panel operation-card operation-card--selected' : 'panel operation-card'} key={product.id} onClick={() => setSelectedId(product.id)}>
+                <div className="operation-card__top"><span className="catalog-card__code">{product.code}</span><span className="status-pill">{product.isActive ? 'Đang bán' : 'Đã ngừng'}</span></div>
+                <h2>{product.name}</h2><p>{product.category} · Size {product.sizes.join(', ') || '—'}</p>
+                <div className="operation-card__meta"><span>{product.availableNowCount}/{product.activeInventoryCount} mã sẵn sàng</span><strong>{product.priceFrom === null ? 'Chưa có giá' : `Từ ${formatMoney(product.priceFrom)}`}</strong></div>
+              </button>)}
+            </div>
+          </AsyncState>
+          {activeBranchId && selectedId && <ProductDetailPanel branchId={activeBranchId} productId={selectedId} isManager={isManager} canManageBranch={canManageBranch} onChanged={refresh} />}
+        </div>
+      )}
     </section>
   )
+}
+
+function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: string; onCancel: () => void; onCreated: (id: string) => void }) {
+  const [product, setProduct] = useState({ code: '', name: '', category: 'DRESS', color: '', material: '', description: '', imagePaths: '' })
+  const [variant, setVariant] = useState(EMPTY_VARIANT)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const setProductField = (field: keyof typeof product, value: string) => setProduct((current) => ({ ...current, [field]: value }))
+  const setVariantField = (field: keyof typeof variant, value: string) => setVariant((current) => ({ ...current, [field]: value }))
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setSaving(true); setError(null)
+    try {
+      const created = await createProduct(branchId, {
+        code: product.code, name: product.name, category: product.category, color: product.color || null,
+        material: product.material || null, description: product.description || null, imagePaths: paths(product.imagePaths),
+        variants: [{ size: variant.size, measurements: variant.measurements || null, replacementValue: Number(variant.replacementValue), prices: priceInputs(variant.price1d, variant.price2d, variant.price3d), inventoryItems: assetItems(variant.assetCodes, variant.cleaningHours) }],
+      })
+      onCreated(created.id)
+    } catch (nextError) { setError(nextError as Error) } finally { setSaving(false) }
+  }
+
+  return <form className="panel create-flow" onSubmit={submit}>
+    <div className="section-heading"><div><span className="eyebrow">Sản phẩm mới</span><h2>Thông tin mẫu</h2></div><button className="button" type="button" onClick={onCancel}>Đóng</button></div>
+    <div className="form-grid">
+      <label className="field"><span>Mã mẫu *</span><input required value={product.code} onChange={(event) => setProductField('code', event.target.value)} placeholder="VD: AUR-RED" /></label>
+      <label className="field"><span>Tên sản phẩm *</span><input required value={product.name} onChange={(event) => setProductField('name', event.target.value)} /></label>
+      <label className="field"><span>Loại *</span><input required value={product.category} onChange={(event) => setProductField('category', event.target.value)} placeholder="DRESS, AO_DAI…" /></label>
+      <label className="field"><span>Màu sắc</span><input value={product.color} onChange={(event) => setProductField('color', event.target.value)} /></label>
+      <label className="field"><span>Chất liệu</span><input value={product.material} onChange={(event) => setProductField('material', event.target.value)} /></label>
+      <label className="field"><span>Đường dẫn ảnh</span><textarea rows={2} value={product.imagePaths} onChange={(event) => setProductField('imagePaths', event.target.value)} placeholder="Mỗi dòng một đường dẫn" /></label>
+      <label className="field field--wide"><span>Mô tả</span><textarea rows={3} value={product.description} onChange={(event) => setProductField('description', event.target.value)} /></label>
+    </div>
+    <div className="catalog-subsection"><h3>Size đầu tiên và giá tại chi nhánh này</h3><VariantFields value={variant} onChange={setVariantField} /></div>
+    {error && <div className="inline-error">{error.message}</div>}
+    <div className="action-buttons"><button className="button button--primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Tạo sản phẩm'}</button><button className="button" type="button" onClick={onCancel}>Hủy</button></div>
+  </form>
+}
+
+function VariantFields({ value, onChange }: { value: typeof EMPTY_VARIANT; onChange: (field: keyof typeof EMPTY_VARIANT, value: string) => void }) {
+  return <div className="form-grid">
+    <label className="field"><span>Size *</span><input required value={value.size} onChange={(event) => onChange('size', event.target.value)} placeholder="S, M, L hoặc ONE_SIZE" /></label>
+    <label className="field"><span>Giá trị thay thế *</span><input required min="1" type="number" value={value.replacementValue} onChange={(event) => onChange('replacementValue', event.target.value)} /></label>
+    <label className="field"><span>Số đo</span><input value={value.measurements} onChange={(event) => onChange('measurements', event.target.value)} placeholder="Ngực 84 · Eo 66" /></label>
+    <label className="field"><span>Cleaning hours</span><input min="0" max="168" type="number" value={value.cleaningHours} onChange={(event) => onChange('cleaningHours', event.target.value)} /></label>
+    <label className="field"><span>Giá 1D *</span><input required min="1" type="number" value={value.price1d} onChange={(event) => onChange('price1d', event.target.value)} /></label>
+    <label className="field"><span>Giá 2D</span><input min="1" type="number" value={value.price2d} onChange={(event) => onChange('price2d', event.target.value)} /></label>
+    <label className="field"><span>Giá 3D</span><input min="1" type="number" value={value.price3d} onChange={(event) => onChange('price3d', event.target.value)} /></label>
+    <label className="field"><span>Mã vật lý *</span><textarea required rows={3} value={value.assetCodes} onChange={(event) => onChange('assetCodes', event.target.value)} placeholder="Mỗi dòng một mã, VD: HN-AUR-S-01" /></label>
+  </div>
+}
+
+function ProductDetailPanel({ branchId, productId, isManager, canManageBranch, onChanged }: { branchId: string; productId: string; isManager: boolean; canManageBranch: boolean; onChanged: () => void }) {
+  const [version, setVersion] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [addingVariant, setAddingVariant] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const detail = useApiQuery(() => getProduct(branchId, productId), [branchId, productId, version])
+  const refresh = () => { setVersion((value) => value + 1); onChanged() }
+  const product = detail.data
+
+  const toggleActive = async () => {
+    if (!product || (product.isActive && !window.confirm('Ngừng kinh doanh sản phẩm này? Dữ liệu đơn cũ vẫn được giữ.'))) return
+    setError(null)
+    try {
+      await updateProduct(branchId, product.id, { name: product.name, category: product.category, color: product.color, material: product.material, description: product.description, imagePaths: product.imagePaths, isActive: !product.isActive })
+      setMessage(product.isActive ? 'Đã xóa sản phẩm khỏi danh sách kinh doanh.' : 'Đã khôi phục sản phẩm.')
+      refresh()
+    } catch (nextError) { setError(nextError as Error) }
+  }
+
+  return <AsyncState loading={detail.loading} error={detail.error}>
+    {product && <aside className="panel detail-panel catalog-detail">
+      <div className="operation-card__top"><span className="catalog-card__code">{product.code}</span><span className="status-pill">{product.isActive ? 'Đang kinh doanh' : 'Đã ngừng'}</span></div>
+      {editing ? <EditProductForm branchId={branchId} product={product} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); setMessage('Đã cập nhật sản phẩm.'); refresh() }} /> : <>
+        <h2>{product.name}</h2><p>{product.category} · {product.color || 'Chưa có màu'} · {product.material || 'Chưa có chất liệu'}</p>
+        {product.description && <p>{product.description}</p>}
+        {canManageBranch && <div className="action-buttons"><button className="button" onClick={() => setAddingVariant((value) => !value)}>+ Thêm size/kho chi nhánh</button>{isManager && <><button className="button button--primary" onClick={() => setEditing(true)}>Sửa thông tin chung</button><button className={product.isActive ? 'button button--danger' : 'button'} onClick={() => void toggleActive()}>{product.isActive ? 'Xóa / ngừng kinh doanh' : 'Khôi phục'}</button></>}</div>}
+      </>}
+      {message && <div className="success-note">{message}</div>}{error && <div className="inline-error">{error.message}</div>}
+      {addingVariant && <AddVariantForm branchId={branchId} productId={product.id} onCancel={() => setAddingVariant(false)} onSaved={() => { setAddingVariant(false); setMessage('Đã thêm size.'); refresh() }} />}
+      <div className="variant-list">{product.variants.map((variant) => <VariantCard key={variant.id} branchId={branchId} variant={variant} canManage={canManageBranch} onChanged={refresh} />)}</div>
+    </aside>}
+  </AsyncState>
+}
+
+function EditProductForm({ branchId, product, onCancel, onSaved }: { branchId: string; product: ProductDetail; onCancel: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({ name: product.name, category: product.category, color: product.color ?? '', material: product.material ?? '', description: product.description ?? '', imagePaths: product.imagePaths.join('\n') })
+  const [error, setError] = useState<Error | null>(null)
+  const set = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(null); try { await updateProduct(branchId, product.id, { name: form.name, category: form.category, color: form.color || null, material: form.material || null, description: form.description || null, imagePaths: paths(form.imagePaths), isActive: product.isActive }); onSaved() } catch (nextError) { setError(nextError as Error) } }
+  return <form className="nested-form" onSubmit={submit}><h2>Sửa {product.code}</h2><div className="form-grid"><label className="field"><span>Tên *</span><input required value={form.name} onChange={(event) => set('name', event.target.value)} /></label><label className="field"><span>Loại *</span><input required value={form.category} onChange={(event) => set('category', event.target.value)} /></label><label className="field"><span>Màu</span><input value={form.color} onChange={(event) => set('color', event.target.value)} /></label><label className="field"><span>Chất liệu</span><input value={form.material} onChange={(event) => set('material', event.target.value)} /></label><label className="field"><span>Đường dẫn ảnh</span><textarea rows={2} value={form.imagePaths} onChange={(event) => set('imagePaths', event.target.value)} /></label><label className="field"><span>Mô tả</span><textarea rows={2} value={form.description} onChange={(event) => set('description', event.target.value)} /></label></div>{error && <div className="inline-error">{error.message}</div>}<div className="action-buttons"><button className="button button--primary">Lưu</button><button className="button" type="button" onClick={onCancel}>Hủy</button></div></form>
+}
+
+function AddVariantForm({ branchId, productId, onCancel, onSaved }: { branchId: string; productId: string; onCancel: () => void; onSaved: () => void }) {
+  const [value, setValue] = useState(EMPTY_VARIANT)
+  const [error, setError] = useState<Error | null>(null)
+  const set = (field: keyof typeof value, next: string) => setValue((current) => ({ ...current, [field]: next }))
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(null); const input: VariantInput = { size: value.size, measurements: value.measurements || null, replacementValue: Number(value.replacementValue), prices: priceInputs(value.price1d, value.price2d, value.price3d), inventoryItems: assetItems(value.assetCodes, value.cleaningHours) }; try { await addVariant(branchId, productId, input); onSaved() } catch (nextError) { setError(nextError as Error) } }
+  return <form className="nested-form" onSubmit={submit}><h3>Thêm size</h3><VariantFields value={value} onChange={set} />{error && <div className="inline-error">{error.message}</div>}<div className="action-buttons"><button className="button button--primary">Thêm size</button><button type="button" className="button" onClick={onCancel}>Hủy</button></div></form>
+}
+
+function VariantCard({ branchId, variant, canManage, onChanged }: { branchId: string; variant: ProductVariant; canManage: boolean; onChanged: () => void }) {
+  const findPrice = (code: string) => String(variant.prices.find((item) => item.packageCode === code)?.price ?? '')
+  const [prices, setPrices] = useState({ one: findPrice('1D'), two: findPrice('2D'), three: findPrice('3D') })
+  const [assetCodes, setAssetCodes] = useState('')
+  const [cleaningHours, setCleaningHours] = useState('12')
+  const [error, setError] = useState<Error | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => setPrices({ one: findPrice('1D'), two: findPrice('2D'), three: findPrice('3D') }), [variant])
+  const savePrices = async () => { setError(null); try { await replacePrices(branchId, variant.id, priceInputs(prices.one, prices.two, prices.three)); setMessage('Đã cập nhật giá cho chi nhánh.'); onChanged() } catch (nextError) { setError(nextError as Error) } }
+  const addAssets = async () => { setError(null); try { await addInventoryItems(branchId, variant.id, assetItems(assetCodes, cleaningHours)); setAssetCodes(''); setMessage('Đã thêm mã vật lý.'); onChanged() } catch (nextError) { setError(nextError as Error) } }
+  const changeStatus = async (item: InventoryItem, status: InventoryItem['status']) => { setError(null); try { await updateInventoryItem(branchId, item.id, status, item.cleaningHours); setMessage(`Đã cập nhật ${item.assetCode}.`); onChanged() } catch (nextError) { setError(nextError as Error) } }
+
+  return <section className="variant-card"><div className="section-heading"><div><span className="eyebrow">Size</span><h3>{variant.size}</h3><small>{variant.measurements || 'Chưa có số đo'} · Giá trị {formatMoney(variant.replacementValue)}</small></div><strong>{variant.inventorySummary.usable}/{variant.inventorySummary.total} usable</strong></div>
+    <div className="price-editor">{(['one', 'two', 'three'] as const).map((key, index) => <label className="field" key={key}><span>{index + 1}D</span><input disabled={!canManage} type="number" min="1" value={prices[key]} onChange={(event) => setPrices((current) => ({ ...current, [key]: event.target.value }))} /></label>)}{canManage && <button className="button" type="button" onClick={() => void savePrices()}>Lưu giá</button>}</div>
+    <div className="inventory-list">{variant.inventoryItems.map((item) => <div className="inventory-row" key={item.id}><div><strong>{item.assetCode}</strong><small>Cleaning {item.cleaningHours}h</small></div>{canManage ? <select value={item.status} onChange={(event) => void changeStatus(item, event.target.value as InventoryItem['status'])}><option value="USABLE">Sẵn sàng</option><option value="MAINTENANCE">Bảo trì</option><option value="LOST">Thất lạc</option><option value="RETIRED">Ngừng dùng</option></select> : <span className="status-pill">{item.status}</span>}</div>)}</div>
+    {canManage && <div className="add-assets"><label className="field"><span>Thêm mã vật lý</span><textarea rows={2} value={assetCodes} onChange={(event) => setAssetCodes(event.target.value)} placeholder="Mỗi dòng một mã" /></label><label className="field"><span>Cleaning hours</span><input type="number" min="0" max="168" value={cleaningHours} onChange={(event) => setCleaningHours(event.target.value)} /></label><button className="button" type="button" disabled={!assetCodes.trim()} onClick={() => void addAssets()}>Thêm vào kho</button></div>}
+    {message && <div className="success-note">{message}</div>}{error && <div className="inline-error">{error.message}</div>}
+  </section>
 }

@@ -8,7 +8,11 @@ public sealed record ReturnQueueItemDto(
     int ItemCount,
     int InspectionCompleted,
     int InspectionTotal,
-    string? RefundStatus);
+    Guid? RefundId,
+    int? RefundVersion,
+    string? RefundStatus,
+    decimal? RefundAmount,
+    decimal? AdditionalCollection);
 
 public sealed record InspectOrderItemRequest(
     string Condition,

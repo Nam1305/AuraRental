@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useSession } from '@/features/session/SessionProvider'
 
 const navigation = [
@@ -15,21 +15,49 @@ const navigation = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, activeBranchId, selectBranch, logout } = useSession()
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(
+    () => localStorage.getItem('aura.desktopNavCollapsed') === 'true',
+  )
   const activeBranch = user?.branches.find((branch) => branch.id === activeBranchId)
   const pathname = window.location.pathname
 
+  useEffect(() => {
+    localStorage.setItem('aura.desktopNavCollapsed', String(desktopNavCollapsed))
+  }, [desktopNavCollapsed])
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNavOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [])
+
+  const toggleNavigation = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setDesktopNavCollapsed((value) => !value)
+    } else {
+      setMobileNavOpen((value) => !value)
+    }
+  }
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="/"><span>A</span><strong>Aura Rental</strong></a>
+    <div className={`app-shell${mobileNavOpen ? ' sidebar-open' : ''}${desktopNavCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <button className="sidebar-backdrop" type="button" aria-label="Đóng menu" onClick={() => setMobileNavOpen(false)} />
+      <aside className="sidebar" id="main-navigation" aria-label="Điều hướng chính">
+        <div className="sidebar-header">
+          <a className="brand" href="/" onClick={() => setMobileNavOpen(false)}><span>A</span><strong>Aura Rental</strong></a>
+          <button className="sidebar-close" type="button" aria-label="Đóng menu" onClick={() => setMobileNavOpen(false)}>×</button>
+        </div>
         <nav>
           {navigation.map((item) => (
-            <a className={pathname === item.href ? 'active' : ''} href={item.href} key={item.href}>
-              <i>{item.icon}</i>{item.label}
+            <a className={pathname === item.href ? 'active' : ''} href={item.href} key={item.href} title={item.label} onClick={() => setMobileNavOpen(false)}>
+              <i>{item.icon}</i><span>{item.label}</span>
             </a>
           ))}
         </nav>
-        <button className="sidebar-user" type="button" onClick={logout}>
+        <button className="sidebar-user" type="button" title="Đăng xuất" onClick={() => { setMobileNavOpen(false); logout() }}>
           <span>{user?.name.slice(0, 1).toUpperCase()}</span>
           <div><strong>{user?.name}</strong><small>{user?.role} · Đăng xuất</small></div>
         </button>
@@ -37,6 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="workspace">
         <header className="topbar">
+          <button className="nav-toggle" type="button" aria-label="Đóng hoặc mở menu" aria-controls="main-navigation" aria-expanded={window.matchMedia('(min-width: 1024px)').matches ? !desktopNavCollapsed : mobileNavOpen} onClick={toggleNavigation}>
+            <span /><span /><span />
+          </button>
           <a className="mobile-brand" href="/"><span>A</span>Aura</a>
           {user && user.branches.length > 1 ? (
             <label className="branch-select">

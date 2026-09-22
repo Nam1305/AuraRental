@@ -43,6 +43,7 @@ public sealed class CatalogUseCase(
                 product.Code,
                 product.Name,
                 product.Category,
+                product.IsActive,
                 product.ImagePaths.FirstOrDefault(),
                 variants.Select(variant => variant.Size).Distinct().Order().ToList(),
                 inventory.Count(item => item.Status != InventoryStatus.Retired && item.Status != InventoryStatus.Lost),
@@ -74,7 +75,6 @@ public sealed class CatalogUseCase(
         CreateProductRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureManager();
         ValidateProduct(request.Code, request.Name, request.Category, request.Variants);
         var code = request.Code.Trim().ToUpperInvariant();
         if (await catalogRepository.ProductCodeExists(code, cancellationToken))
@@ -114,14 +114,15 @@ public sealed class CatalogUseCase(
         CancellationToken cancellationToken)
     {
         EnsureManager();
-        if (string.IsNullOrWhiteSpace(request.Name))
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Category))
         {
-            throw new ValidationException("PRODUCT_NAME_REQUIRED", "Tên sản phẩm là bắt buộc.");
+            throw new ValidationException("PRODUCT_FIELDS_REQUIRED", "Tên và loại sản phẩm là bắt buộc.");
         }
 
         var product = await catalogRepository.GetProductForUpdate(productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
         product.Name = request.Name.Trim();
+        product.Category = request.Category.Trim().ToUpperInvariant();
         product.Color = request.Color?.Trim();
         product.Material = request.Material?.Trim();
         product.Description = request.Description?.Trim();
@@ -136,7 +137,6 @@ public sealed class CatalogUseCase(
         CreateProductVariantInput request,
         CancellationToken cancellationToken)
     {
-        EnsureManager();
         ValidateVariant(request);
         _ = await catalogRepository.GetProductForUpdate(productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
@@ -168,7 +168,6 @@ public sealed class CatalogUseCase(
         ReplaceRentalPricesRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureManager();
         ValidatePrices(request.Prices);
         var variant = await catalogRepository.GetVariantForUpdate(variantId, requestContext.BranchId, cancellationToken)
             ?? throw new NotFoundException("VARIANT_NOT_FOUND", "Không tìm thấy variant.");
@@ -188,7 +187,6 @@ public sealed class CatalogUseCase(
         AddInventoryItemsRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureManager();
         _ = await catalogRepository.GetVariantForUpdate(variantId, requestContext.BranchId, cancellationToken)
             ?? throw new NotFoundException("VARIANT_NOT_FOUND", "Không tìm thấy variant.");
         var codes = request.Items.Select(item => item.AssetCode.Trim().ToUpperInvariant()).ToArray();
@@ -218,7 +216,6 @@ public sealed class CatalogUseCase(
         UpdateInventoryItemRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureManager();
         var item = await catalogRepository.GetInventoryItemForUpdate(
                 inventoryItemId,
                 requestContext.BranchId,
@@ -259,7 +256,8 @@ public sealed class CatalogUseCase(
                 inventory.Count(item => item.Status == InventoryStatus.Usable),
                 inventory.Count(item => item.Status == InventoryStatus.Maintenance),
                 inventory.Count(item => item.Status == InventoryStatus.Lost),
-                inventory.Count(item => item.Status == InventoryStatus.Retired)));
+                inventory.Count(item => item.Status == InventoryStatus.Retired)),
+            inventory.OrderBy(item => item.AssetCode).Select(ToInventoryItem).ToList());
     }
 
     private ProductVariant CreateVariantEntity(CreateProductVariantInput request, int defaultCleaningHours)

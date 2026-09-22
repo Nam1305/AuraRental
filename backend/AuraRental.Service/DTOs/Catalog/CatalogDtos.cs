@@ -7,6 +7,7 @@ public sealed record ProductListItemDto(
     string Code,
     string Name,
     string Category,
+    bool IsActive,
     string? CoverImagePath,
     IReadOnlyList<string> Sizes,
     int ActiveInventoryCount,
@@ -22,7 +23,8 @@ public sealed record ProductVariantDto(
     string? Measurements,
     decimal ReplacementValue,
     IReadOnlyList<RentalPriceDto> Prices,
-    InventorySummaryDto InventorySummary);
+    InventorySummaryDto InventorySummary,
+    IReadOnlyList<InventoryItemDto> InventoryItems);
 
 public sealed record ProductDetailDto(
     Guid Id,
@@ -58,6 +60,7 @@ public sealed record CreateProductRequest(
 
 public sealed record UpdateProductRequest(
     string Name,
+    string Category,
     string? Color,
     string? Material,
     string? Description,

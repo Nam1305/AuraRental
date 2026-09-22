@@ -288,6 +288,7 @@ public sealed class OrderUseCase(
         var confirmed = RentalRules.ConfirmedDeposit(order.Reservation.Payments);
         return new OrderDetailDto(
             order.Id,
+            order.ReservationId,
             order.OrderNo,
             ApiText.EnumValue(order.Status),
             order.Branch.Id,

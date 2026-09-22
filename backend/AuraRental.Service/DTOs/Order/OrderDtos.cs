@@ -53,6 +53,7 @@ public sealed record DeliveryDto(string Status, string? TrackingCode, DateTimeOf
 
 public sealed record OrderDetailDto(
     Guid Id,
+    Guid ReservationId,
     string OrderNo,
     string Status,
     Guid BranchId,

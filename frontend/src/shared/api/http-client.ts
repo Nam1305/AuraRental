@@ -33,6 +33,10 @@ export function setStoredBranchId(branchId: string) {
   localStorage.setItem(ACTIVE_BRANCH_KEY, branchId)
 }
 
+export function idempotencyHeaders() {
+  return { 'Idempotency-Key': crypto.randomUUID() }
+}
+
 type RequestOptions = RequestInit & { branchId?: string | null }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {

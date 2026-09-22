@@ -49,7 +49,11 @@ public sealed class ReturnUseCase(
                 order.Items.Count,
                 order.Items.Count(item => item.Condition.HasValue),
                 order.Items.Count,
-                latestRefund is null ? null : ApiText.EnumValue(latestRefund.Status));
+                latestRefund?.Id,
+                latestRefund?.Version,
+                latestRefund is null ? null : ApiText.EnumValue(latestRefund.Status),
+                latestRefund?.RefundAmount,
+                latestRefund is null ? null : AdditionalCollection(latestRefund));
         });
 
         if (requestedStatuses.Count > 0)

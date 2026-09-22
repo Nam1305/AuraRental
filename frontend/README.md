@@ -29,7 +29,14 @@ src/
 
 ## Trạng thái hiện tại
 
-Các màn đăng nhập development token, shell/branch switcher, availability, catalog, customer list và customer history đã gọi API thật. Các màn reservations, orders, returns, reports và settings là route/boundary có chủ đích; chúng hiển thị endpoint sẽ nối thay vì mock dữ liệu giả.
+Các màn đăng nhập email/username + password, shell/branch switcher, availability, catalog, customer list/history, giữ chỗ, đơn hàng và trả đồ đã gọi API thật.
+
+- Kho sản phẩm: staff và manager được tạo mẫu, thêm size, sửa giá `1D/2D/3D`, thêm mã vật lý và cập nhật trạng thái kho trong chi nhánh đang đăng nhập. Chỉ manager được sửa metadata dùng chung hoặc archive/khôi phục mẫu.
+- Giữ chỗ: tìm khách, kiểm tra mã đồ trống, chọn gói thuê, xem báo giá, ghi nhận cọc, cấp lại OTP, gia hạn và hủy.
+- Đơn hàng: theo dõi timeline, xác minh CCCD, bổ sung cọc, chuẩn bị đồ, giao/nhận và hủy theo trạng thái được backend cho phép.
+- Trả đồ: kiểm tra từng món, lập/gửi/duyệt phiếu hoàn, ghi nhận thu thêm và hoàn tất đối soát. Các bước duyệt/settle chỉ hiện với manager.
+
+Reports và settings hiện vẫn là route/boundary có chủ đích. Ảnh hư hại ở màn trả đồ hiện nhận object path; luồng upload file/presigned URL chưa thuộc phạm vi triển khai này.
 
 ## Chạy local
 
@@ -45,6 +52,6 @@ Build kiểm tra type và bundle:
 npm run build
 ```
 
-Production nên cấu hình `VITE_AUTH_LOGIN_URL` tới auth provider. Ô dán JWT chỉ là công cụ local; JWT phải có claim `sub` là UUID trùng `users.auth_subject`.
+Frontend gọi `POST /api/v1/auth/login`, lưu access token nhận từ backend và dùng token đó cho các API nội bộ. Role và quyền chi nhánh luôn lấy từ `GET /api/v1/me`, không lấy từ input đăng nhập.
 
 Vì app dùng history-style URL, reverse proxy cần fallback các route frontend về `index.html`, nhưng không fallback `/api/*`.

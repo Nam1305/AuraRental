@@ -13,7 +13,7 @@ Luồng phụ thuộc chỉ đi theo chiều `WebAPI -> Service -> Domain`. Cont
 ## Phần đã triển khai
 
 - Map toàn bộ bảng nghiệp vụ và bảng idempotency trong `database/schema.sql` sang entity và `AuraRentalDbContext`.
-- JWT authentication; claim `sub` được map vào `users.auth_subject`.
+- Đăng nhập nội bộ bằng email/username + password hash; backend phát JWT có `sub = users.id`.
 - Request context theo user và middleware kiểm tra `X-Branch-Id` với `user_branches`.
 - Response/error envelope, request ID và exception middleware.
 - `GET /health`.
@@ -47,7 +47,7 @@ Hai integration cần adapter hạ tầng trước khi mở production là `POST
 
 ## Chạy local
 
-Không có migration tự chạy. Tạo database bằng `../database/schema.sql`, sau đó cấu hình connection string và JWT bằng environment variable hoặc user-secrets.
+Không có migration tự chạy. Tạo database bằng `../database/schema.sql`, sau đó cấu hình connection string và khóa ký JWT bằng environment variable hoặc user-secrets.
 
 ```bash
 dotnet restore AuraRental.slnx
@@ -59,15 +59,16 @@ Các key cấu hình chính:
 
 ```text
 ConnectionStrings__DefaultConnection
-Authentication__Authority         # production/OIDC
+Authentication__Issuer
 Authentication__Audience
-Authentication__DevelopmentSecret # chỉ local nếu không có Authority
+Authentication__SigningKey        # secret tối thiểu 32 bytes
+Authentication__AccessTokenMinutes
 Cors__Origins__0
 Security__TokenPepper
 Frontend__BaseUrl
 ```
 
-Không đưa secret production vào `appsettings.json`. `DevelopmentSecret` hiện tại chỉ giúp project khởi động local và phải được override ngoài source.
+Không đưa secret production vào `appsettings.json`. `SigningKey` hiện tại chỉ dùng local và phải được override bằng secret ngoài source khi deploy.
 
 ## Thêm module mới
 

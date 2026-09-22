@@ -10,21 +10,17 @@ docker exec -i postgres-db-1 psql -v ON_ERROR_STOP=1 -U postgres -d aura_rental 
 
 `seed.sql` dùng UUID cố định và UPSERT nên có thể chạy lại mà không nhân bản dữ liệu. File không xóa dữ liệu được tạo thủ công. Bộ seed gồm hai chi nhánh, ba tài khoản, catalog và giá `1D/2D/3D` theo từng chi nhánh, cùng reservation/order/refund ở nhiều trạng thái.
 
-| Vai trò | Email mô phỏng | JWT `sub` |
-|---|---|---|
-| Manager | `manager@aurarental.local` | `21000000-0000-0000-0000-000000000001` |
-| Staff Hà Nội | `hanoi.staff@aurarental.local` | `21000000-0000-0000-0000-000000000002` |
-| Staff Sài Gòn | `saigon.staff@aurarental.local` | `21000000-0000-0000-0000-000000000003` |
+Bộ dữ liệu hiện có 16 mã đồ vật lý, 11 lượt giữ chỗ, 8 đơn hàng và 2 phiếu hoàn. Các case Hà Nội bao phủ giữ chỗ còn hạn/quá hạn, đơn thiếu cọc, chờ xác minh CCCD, đã xác nhận, đang chuẩn bị, đang thuê và đang kiểm đồ; trong hàng đợi trả có cả đơn chưa inspection và đơn đã gửi manager duyệt. Sài Gòn có giữ chỗ đang hoạt động và đơn đã hoàn tất để kiểm tra phân quyền/dữ liệu theo chi nhánh.
+
+| Vai trò | Username | Email | Password development |
+|---|---|---|---|
+| Manager | `manager` | `manager@aurarental.local` | `Manager@123` |
+| Staff Hà Nội | `hanoi` | `hanoi.staff@aurarental.local` | `Hanoi@123` |
+| Staff Sài Gòn | `saigon` | `saigon.staff@aurarental.local` | `Saigon@123` |
 
 Form công khai mẫu dùng token `mock-hn-reservation-token` và OTP `123456`. Hạn token được làm mới thành 24 giờ kể từ mỗi lần chạy lại seed.
 
-Frontend development nhận JWT trực tiếp. Tạo token có hạn một giờ từ thư mục gốc:
-
-```bash
-backend/scripts/generate-dev-jwt.sh manager
-backend/scripts/generate-dev-jwt.sh hanoi
-backend/scripts/generate-dev-jwt.sh saigon
-```
+Các password trên chỉ dùng local. Database lưu hash PBKDF2 có salt, không lưu password gốc. Frontend gọi `POST /api/v1/auth/login`; backend phát access token nội bộ sau khi xác thực thành công.
 
 Có **15 bảng dữ liệu nghiệp vụ** cho multi-branch và một bảng kỹ thuật `idempotency_records`; không trigger, stored function, bảng audit/outbox hoặc bảng tài liệu PNG. [schema.sql](schema.sql) là nguồn DDL để khởi tạo database; backend không tự động chạy migration hay áp dụng file này.
 
@@ -45,8 +41,9 @@ Có **15 bảng dữ liệu nghiệp vụ** cho multi-branch và một bảng k�
 
 | Thuộc tính | Ý nghĩa |
 |---|---|
-| `id`, `auth_subject` | ID nội bộ và ID từ hệ thống đăng nhập; không lưu password tại đây. |
-| `name`, `email` | Tên và email nhân viên. |
+| `id`, `username` | ID nội bộ và username đăng nhập đã chuẩn hóa chữ thường. |
+| `password_hash` | Password hash PBKDF2 có salt; tuyệt đối không lưu password gốc. |
+| `name`, `email` | Tên và email đăng nhập/liên hệ của nhân viên. |
 | `role`, `is_active` | `staff`/`manager`, có được dùng hệ thống hay không. |
 
 Các trường `created_by`, `submitted_by`, `approved_by`, `recorded_by`, `confirmed_by`, `settled_by` ở bảng khác đều liên kết `users.id`.
