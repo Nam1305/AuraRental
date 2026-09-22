@@ -3,6 +3,7 @@ namespace AuraRental.Domain.Entities;
 public sealed class Product
 {
     public Guid Id { get; set; }
+    public Guid BranchId { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string Category { get; set; } = null!;
@@ -11,5 +12,6 @@ public sealed class Product
     public string? Description { get; set; }
     public string[] ImagePaths { get; set; } = [];
     public bool IsActive { get; set; } = true;
+    public Branch Branch { get; set; } = null!;
     public ICollection<ProductVariant> Variants { get; set; } = [];
 }

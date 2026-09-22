@@ -17,8 +17,6 @@ export type InventoryItem = {
   id: string
   assetCode: string
   status: 'USABLE' | 'MAINTENANCE' | 'LOST' | 'RETIRED'
-  cleaningHours: number
-  cleaningUntil: string | null
 }
 
 export type ProductVariant = {
@@ -49,7 +47,7 @@ export type VariantInput = {
   measurements: string | null
   replacementValue: number
   prices: Array<{ packageCode: string; price: number }>
-  inventoryItems: Array<{ assetCode: string; cleaningHours: number | null }>
+  inventoryItems: Array<{ assetCode: string }>
 }
 
 export type CreateProductInput = {

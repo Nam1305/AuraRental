@@ -48,19 +48,18 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
             item.Status == InventoryStatus.Usable &&
             item.Variant.IsActive &&
             item.Variant.Product.IsActive &&
-            (item.CleaningUntil == null || item.CleaningUntil <= startAt) &&
             !item.ReservationItems.Any(reservationItem =>
                 reservationItem.ReservationId != ignoredReservationId &&
                 (reservationItem.Reservation.Status == ReservationStatus.Active ||
                  reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
                 reservationItem.Reservation.RentalStartAt < endAt &&
-                reservationItem.Reservation.RentalEndAt.AddHours(item.CleaningHours) > startAt) &&
+                reservationItem.Reservation.RentalEndAt > startAt) &&
             !item.OrderItems.Any(orderItem =>
                 orderItem.Order.ReservationId != ignoredReservationId &&
                 orderItem.Order.Status != OrderStatus.Completed &&
                 orderItem.Order.Status != OrderStatus.Cancelled &&
                 orderItem.Order.Reservation.RentalStartAt < endAt &&
-                orderItem.Order.Reservation.RentalEndAt.AddHours(item.CleaningHours) > startAt),
+                orderItem.Order.Reservation.RentalEndAt > startAt),
             cancellationToken);
 
         return count == ids.Length;

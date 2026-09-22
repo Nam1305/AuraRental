@@ -8,7 +8,11 @@ public sealed record AvailableInventoryItemDto(
     Guid InventoryItemId,
     string AssetCode,
     string Status,
-    bool AvailableForWholePeriod);
+    bool AvailableForWholePeriod,
+    string AvailabilityStatus,
+    string? AvailabilityNote,
+    DateTimeOffset? BusyUntil,
+    string? ReferenceNo);
 
 public sealed record AvailabilityGroupDto(
     Guid ProductId,
@@ -32,5 +36,4 @@ public sealed record InventoryOverviewDto(
     int UsableNow,
     int Renting,
     int Reserved,
-    int Cleaning,
     int Maintenance);

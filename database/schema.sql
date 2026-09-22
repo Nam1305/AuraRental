@@ -41,14 +41,16 @@ CREATE TABLE customers (
 
 CREATE TABLE products (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    code text NOT NULL UNIQUE,
+    branch_id uuid NOT NULL REFERENCES branches (id),
+    code text NOT NULL,
     name text NOT NULL,
     category text NOT NULL,
     color text,
     material text,
     description text,
     image_paths text[] NOT NULL DEFAULT '{}',
-    is_active boolean NOT NULL DEFAULT true
+    is_active boolean NOT NULL DEFAULT true,
+    UNIQUE (branch_id, code)
 );
 
 CREATE TABLE product_variants (
@@ -66,9 +68,7 @@ CREATE TABLE inventory_items (
     variant_id uuid NOT NULL REFERENCES product_variants (id),
     branch_id uuid NOT NULL REFERENCES branches (id),
     asset_code text NOT NULL UNIQUE,
-    status text NOT NULL DEFAULT 'USABLE',
-    cleaning_hours integer NOT NULL DEFAULT 12,
-    cleaning_until timestamptz
+    status text NOT NULL DEFAULT 'USABLE'
 );
 
 -- A package exists at a branch exactly when it has a price row.
@@ -86,7 +86,6 @@ CREATE TABLE branch_rental_prices (
 CREATE TABLE settings (
     id integer PRIMARY KEY DEFAULT 1,
     slot_deposit_amount numeric(14,0) NOT NULL DEFAULT 100000,
-    default_cleaning_hours integer NOT NULL DEFAULT 12,
     extra_day_rate numeric(6,4) NOT NULL DEFAULT 0.1000
 );
 

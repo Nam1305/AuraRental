@@ -5,12 +5,10 @@ namespace AuraRental.Service.Interface.Persistence;
 
 public interface IAvailabilityRepository
 {
-    Task<IReadOnlyList<InventoryItem>> FindAvailable(
+    Task<IReadOnlyList<InventoryItem>> FindCandidates(
         Guid branchId,
         string? query,
         string? size,
-        DateTimeOffset startAt,
-        DateTimeOffset endAt,
         int limit,
         CancellationToken cancellationToken);
 

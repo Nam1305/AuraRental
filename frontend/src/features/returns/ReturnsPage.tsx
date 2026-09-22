@@ -5,6 +5,7 @@ import { formatMoney } from '@/shared/format/money'
 import { formatDateTime } from '@/shared/format/date'
 import { statusLabel } from '@/shared/format/status'
 import { useSession } from '@/features/session/SessionProvider'
+import { ImageUploadInput } from '@/shared/components/ImageUploadInput'
 import { getOrder } from '@/features/orders/order.api'
 import type { OrderItem } from '@/features/orders/order.types'
 import { recordReservationPayment } from '@/features/reservations/reservation.api'
@@ -92,7 +93,7 @@ function InspectionForm({ branchId, orderId, item, onSaved, onError }: { branchI
   const [actualRentalFee, setActualRentalFee] = useState(String(item.rentalPrice))
   const [processingFee, setProcessingFee] = useState(String(item.processingFee ?? 0))
   const [damageNote, setDamageNote] = useState(item.damageNote ?? '')
-  const [damagePhotoPath, setDamagePhotoPath] = useState(item.damagePhotoPaths[0] ?? '')
+  const [damagePhotoPaths, setDamagePhotoPaths] = useState(item.damagePhotoPaths.join('\n'))
   const [saving, setSaving] = useState(false)
   const inventoryOutcome = condition === 'GOOD' ? 'USABLE' : condition === 'DAMAGED' ? 'MAINTENANCE' : 'LOST'
 
@@ -105,7 +106,7 @@ function InspectionForm({ branchId, orderId, item, onSaved, onError }: { branchI
         actualRentalFee: Number(actualRentalFee),
         processingFee: condition === 'GOOD' ? 0 : Number(processingFee),
         damageNote: damageNote.trim() || null,
-        damagePhotoPaths: damagePhotoPath.trim() ? [damagePhotoPath.trim()] : [],
+        damagePhotoPaths: damagePhotoPaths.split('\n').map((path) => path.trim()).filter(Boolean),
         inventoryOutcome,
       })
       onSaved()
@@ -118,7 +119,7 @@ function InspectionForm({ branchId, orderId, item, onSaved, onError }: { branchI
       <label className="field"><span>Tình trạng</span><select value={condition} onChange={(event) => { const value = event.target.value; setCondition(value); if (value === 'GOOD') setProcessingFee('0') }}><option value="GOOD">Tốt</option><option value="DAMAGED">Hư hỏng</option><option value="MISSING">Thất lạc</option></select></label>
       <label className="field"><span>Phí thuê thực tế</span><input type="number" min="0" value={actualRentalFee} onChange={(event) => setActualRentalFee(event.target.value)} required /></label>
       {condition !== 'GOOD' && <label className="field"><span>Phí xử lý/bồi thường</span><input type="number" min="0" value={processingFee} onChange={(event) => setProcessingFee(event.target.value)} required /></label>}
-      {condition === 'DAMAGED' && <><label className="field"><span>Mô tả hư hỏng</span><textarea value={damageNote} onChange={(event) => setDamageNote(event.target.value)} required /></label><label className="field"><span>Đường dẫn ảnh bằng chứng</span><input value={damagePhotoPath} onChange={(event) => setDamagePhotoPath(event.target.value)} placeholder="/uploads/damage/..." required /></label></>}
+      {condition === 'DAMAGED' && <><label className="field"><span>Mô tả hư hỏng</span><textarea value={damageNote} onChange={(event) => setDamageNote(event.target.value)} required /></label><label className="field"><span>Ảnh bằng chứng</span><ImageUploadInput branchId={branchId} purpose="DAMAGE_EVIDENCE" value={damagePhotoPaths} onChange={setDamagePhotoPaths} /></label></>}
     </div>
     <div className="inspection-card__footer"><span>Kho sau kiểm: <strong>{statusLabel(inventoryOutcome)}</strong></span><button className="button" disabled={saving}>{saving ? 'Đang lưu…' : item.condition ? 'Cập nhật' : 'Lưu kiểm tra'}</button></div>
   </form>

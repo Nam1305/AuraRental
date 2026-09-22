@@ -103,10 +103,6 @@ public sealed class ReturnUseCase(
         item.DamageNote = string.IsNullOrWhiteSpace(request.DamageNote) ? null : request.DamageNote.Trim();
         item.DamagePhotoPaths = request.DamagePhotoPaths.Select(path => path.Trim()).Where(path => path.Length > 0).Distinct().ToArray();
         item.InventoryItem.Status = outcome;
-        if (outcome != InventoryStatus.Usable)
-        {
-            item.InventoryItem.CleaningUntil = null;
-        }
 
         var draft = order.Refunds.FirstOrDefault(refund => refund.Status == RefundStatus.Draft);
         if (draft is not null)
@@ -362,15 +358,12 @@ public sealed class ReturnUseCase(
             {
                 case ItemCondition.Good:
                     item.InventoryItem.Status = InventoryStatus.Usable;
-                    item.InventoryItem.CleaningUntil = settledAt.AddHours(item.InventoryItem.CleaningHours);
                     break;
                 case ItemCondition.Damaged:
                     item.InventoryItem.Status = InventoryStatus.Maintenance;
-                    item.InventoryItem.CleaningUntil = null;
                     break;
                 case ItemCondition.Missing:
                     item.InventoryItem.Status = InventoryStatus.Lost;
-                    item.InventoryItem.CleaningUntil = null;
                     break;
             }
         }
@@ -386,8 +379,7 @@ public sealed class ReturnUseCase(
             settledAt,
             refund.Order.Items.Select(item => new SettledInventoryDto(
                 item.InventoryItemId,
-                ApiText.EnumValue(item.InventoryItem.Status),
-                item.InventoryItem.CleaningUntil)).ToList());
+                ApiText.EnumValue(item.InventoryItem.Status))).ToList());
     }
 
     private async Task<RefundDto> ChangeRefundStatus(

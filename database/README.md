@@ -54,9 +54,9 @@ Các trường `created_by`, `submitted_by`, `approved_by`, `recorded_by`, `conf
 
 ### 3. `products` — mẫu sản phẩm
 
-`id`, `code`, `name`, `category`, `color`, `material`, `description`, `image_paths`, `is_active`.
+`id`, `branch_id`, `code`, `name`, `category`, `color`, `material`, `description`, `image_paths`, `is_active`.
 
-Mỗi dòng là một mẫu váy/phụ kiện. `image_paths` là danh sách đường dẫn ảnh, phần tử đầu dùng làm ảnh bìa. `is_active` để ngừng nhận lượt thuê mới, không xóa lịch sử.
+Mỗi dòng là một mẫu váy/phụ kiện thuộc một chi nhánh. `code` chỉ cần duy nhất trong chi nhánh đó; cùng mã có thể tồn tại ở chi nhánh khác. `image_paths` là danh sách đường dẫn ảnh, phần tử đầu dùng làm ảnh bìa. `is_active` để ngừng nhận lượt thuê mới, không xóa lịch sử.
 
 ### 4. `product_variants` — size của mẫu
 
@@ -66,9 +66,9 @@ Mỗi dòng là một mẫu váy/phụ kiện. `image_paths` là danh sách đư
 
 ### 5. `inventory_items` — từng món đồ thật
 
-`id`, `variant_id`, `branch_id`, `asset_code`, `status`, `cleaning_hours`, `cleaning_until`.
+`id`, `variant_id`, `branch_id`, `asset_code`, `status`.
 
-Một variant có nhiều mã vật lý. `status` là `USABLE`, `MAINTENANCE`, `RETIRED`, `LOST`. `cleaning_until` cho biết cleaning tới lúc nào; `cleaning_hours` là thời lượng cleaning của mã. Không nhập quantity: đếm số dòng inventory.
+Một variant có nhiều mã vật lý. `status` là `USABLE`, `MAINTENANCE`, `RETIRED`, `LOST`. Không nhập quantity: đếm số dòng inventory.
 
 “Trống”, “đã giữ lịch”, “đang thuê” được backend tính từ reservation/order và thời gian, không lưu thêm một cờ để dễ bị lệch dữ liệu.
 
@@ -80,9 +80,9 @@ Một variant có nhiều mã vật lý. `status` là `USABLE`, `MAINTENANCE`, `
 
 ### 7. `settings` — cấu hình chung
 
-`id`, `slot_deposit_amount`, `extra_day_rate`, `default_cleaning_hours`.
+`id`, `slot_deposit_amount`, `extra_day_rate`.
 
-Chỉ dùng một dòng `id = 1`: cọc giữ slot mặc định 100k, tỷ lệ ngày thêm mặc định 10%, cleaning mặc định 12h. Giá trị mặc định áp dụng lúc tạo dữ liệu mới; thay config không sửa số tiền đã chốt/cleaning đang chạy. Backend bảo đảm chỉ một dòng.
+Chỉ dùng một dòng `id = 1`: cọc giữ slot mặc định 100k và tỷ lệ ngày thêm mặc định 10%. Backend bảo đảm chỉ một dòng.
 
 ### 8. `reservations` — giữ lịch sau khi nhận cọc
 
@@ -103,9 +103,9 @@ Mỗi reservation có nhiều món; mỗi món đã gán mã vật lý ngay khi 
 
 ### 9. `reservation_items` — các món giữ lịch
 
-`id`, `reservation_id`, `inventory_item_id`, `package_code`, `replacement_value`, `rental_price`, `one_day_price`, `extra_day_rate`, `cleaning_hours`.
+`id`, `reservation_id`, `inventory_item_id`, `package_code`, `replacement_value`, `rental_price`, `one_day_price`, `extra_day_rate`.
 
-Liên kết lượt giữ lịch với từng mã đồ. Giá trị đồ, giá gói, giá 1 ngày, tỷ lệ ngày thêm và cleaning là bản sao lúc báo giá. Chúng giúp tính cọc/thuê/lịch bận không phụ thuộc config sau này. Một mã chỉ xuất hiện một lần trong một reservation.
+Liên kết lượt giữ lịch với từng mã đồ. Giá trị đồ, giá gói, giá 1 ngày và tỷ lệ ngày thêm là bản sao lúc báo giá. Chúng giúp tính cọc/thuê/lịch bận không phụ thuộc config sau này. Một mã chỉ xuất hiện một lần trong một reservation.
 
 ### 10. `orders` — đơn sau khi khách gửi form hợp lệ
 
@@ -200,17 +200,17 @@ erDiagram
 | Giao/nhận | Cập nhật trạng thái/tracking/thời gian trên order. |
 | Kiểm tra đồ | Cập nhật condition, phí thực tế, phí xử lý, ghi chú/ảnh trên order_items. |
 | Gửi/duyệt/duyệt lại | Tạo/cập nhật refunds; khi duyệt chốt totals và items_snapshot. |
-| Chuyển khoản/đối soát | Xác nhận payment REFUND, set order settled/COMPLETED; đặt inventory cleaning_until. |
+| Chuyển khoản/đối soát | Xác nhận payment REFUND, set order settled/COMPLETED và trả mã đồ về trạng thái sau kiểm tra. |
 | Copy PNG | Render từ refunds đã duyệt + thông tin đơn và trạng thái settled; không bảng ảnh riêng. |
 
-Hoàn 0đ: không tạo payment 0đ; manager xác nhận đối soát và set settled. Nếu phí vượt cọc: `cần thu thêm = max(0, rental_fee + processing_fee - deposit_amount)`; xác nhận thu thêm trước settled. Ảnh không có mốc thời gian; timestamp nội bộ vẫn cần cho tính ngày thuê/cleaning.
+Hoàn 0đ: không tạo payment 0đ; manager xác nhận đối soát và set settled. Nếu phí vượt cọc: `cần thu thêm = max(0, rental_fee + processing_fee - deposit_amount)`; xác nhận thu thêm trước settled. Ảnh không có mốc thời gian; timestamp nội bộ vẫn cần cho tính ngày thuê.
 
 ## 5. Những việc để ở backend, không trigger
 
 - Kiểm tra role, trạng thái và dữ liệu bắt buộc; manager không phải chờ staff.
 - Tính cọc/thuê/phí và snapshot, bảo đảm tổng item bằng tổng phiếu duyệt.
-- Chống double booking: transaction lock các inventory item theo thứ tự cố định, kiểm tra reservation ACTIVE/OVERDUE và order chưa COMPLETED/CANCELLED giao khoảng thuê + buffer cleaning; kiểm tra `cleaning_until`/maintenance. Mọi đường tạo/đổi lịch, bảo trì, nhận trả và settled phải dùng cùng quy tắc khóa.
-- Trả trễ hoặc cleaning kéo dài gặp đơn sau: báo xung đột để manager xử lý, không âm thầm coi là trống. Sau settled kiểm tra cleaning_until thực tế, không khóa theo booking cũ nữa.
+- Chống double booking: transaction lock các inventory item theo thứ tự cố định, kiểm tra reservation ACTIVE/OVERDUE và order chưa COMPLETED/CANCELLED giao khoảng thuê; kiểm tra trạng thái `MAINTENANCE`. Mọi đường tạo/đổi lịch, bảo trì, nhận trả và settled phải dùng cùng quy tắc khóa.
+- Trả trễ gặp đơn sau: báo xung đột để manager xử lý, không âm thầm coi là trống.
 - Serialize duyệt/điều chỉnh/chi bằng lock order; chống bấm lặp, một bản duyệt hiện hành và một lần chi confirmed. PK/FK/unique đơn giản không thay thế những transaction này.
 - Next.js gọi .NET; không cấp frontend quyền ghi trực tiếp bảng nghiệp vụ. Ảnh hư hại/chứng từ private, chỉ lưu object path, không signed URL hết hạn. PNG được tạo từ snapshot, không timeline/CCCD/chứng từ trong payload khách.
 - Không có lịch sử giá/policy/OTP, audit đầy đủ, notification persisted, shipment nhiều chặng hoặc hoàn từng phần trong bản tối giản. Có nhu cầu thật mới thêm bảng; không tạo sẵn hạ tầng đó.

@@ -43,7 +43,7 @@ export const replacePrices = (
 export const addInventoryItems = (
   branchId: string,
   variantId: string,
-  items: Array<{ assetCode: string; cleaningHours: number | null }>,
+  items: Array<{ assetCode: string }>,
 ) => apiRequest<InventoryItem[]>(`/api/v1/product-variants/${variantId}/inventory-items`, {
   method: 'POST', branchId, headers: idempotencyHeaders(), body: JSON.stringify({ items }),
 })
@@ -52,8 +52,7 @@ export const updateInventoryItem = (
   branchId: string,
   inventoryItemId: string,
   status: InventoryItem['status'],
-  cleaningHours: number,
 ) => apiRequest<InventoryItem>(`/api/v1/inventory-items/${inventoryItemId}`, {
   method: 'PATCH', branchId, headers: idempotencyHeaders(),
-  body: JSON.stringify({ status, cleaningHours }),
+  body: JSON.stringify({ status }),
 })

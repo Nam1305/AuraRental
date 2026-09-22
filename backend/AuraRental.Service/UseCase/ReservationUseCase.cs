@@ -328,6 +328,10 @@ public sealed class ReservationUseCase(
             Note = request.Note?.Trim()
         };
         reservation.Payments.Add(payment);
+        // The reservation is loaded through a row-lock query before its graph is hydrated.
+        // Explicitly mark a new payment as Added; relationship discovery alone may treat a
+        // non-empty client-generated UUID as an existing row and issue an UPDATE.
+        rentalRepository.AddPayment(payment);
         UpdateOrderAfterDeposit(reservation);
         await unitOfWork.SaveChanges(cancellationToken);
         await transaction.Commit(cancellationToken);

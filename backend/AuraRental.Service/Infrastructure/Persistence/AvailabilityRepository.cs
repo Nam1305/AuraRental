@@ -8,16 +8,17 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 
 public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvailabilityRepository
 {
-    public async Task<IReadOnlyList<InventoryItem>> FindAvailable(
+    public async Task<IReadOnlyList<InventoryItem>> FindCandidates(
         Guid branchId,
         string? query,
         string? size,
-        DateTimeOffset startAt,
-        DateTimeOffset endAt,
         int limit,
         CancellationToken cancellationToken)
     {
-        var items = AvailableQuery(branchId, startAt, endAt);
+        var items = context.InventoryItems.Where(item =>
+            item.BranchId == branchId &&
+            item.Variant.IsActive &&
+            item.Variant.Product.IsActive);
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -40,6 +41,11 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
                 .ThenInclude(variant => variant.Product)
             .Include(item => item.Variant)
                 .ThenInclude(variant => variant.RentalPrices.Where(price => price.BranchId == branchId))
+            .Include(item => item.ReservationItems)
+                .ThenInclude(reservationItem => reservationItem.Reservation)
+            .Include(item => item.OrderItems)
+                .ThenInclude(orderItem => orderItem.Order)
+                    .ThenInclude(order => order.Reservation)
             .OrderBy(item => item.Variant.Product.Name)
             .ThenBy(item => item.Variant.Size)
             .ThenBy(item => item.AssetCode)
@@ -72,7 +78,6 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
         int limit,
         CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
         var variants = context.ProductVariants
             .AsNoTracking()
             .Where(variant => variant.InventoryItems.Any(item => item.BranchId == branchId));
@@ -96,25 +101,22 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId &&
                     item.Status == InventoryStatus.Usable &&
-                    (item.CleaningUntil == null || item.CleaningUntil <= now) &&
                     !item.ReservationItems.Any(reservationItem =>
                         (reservationItem.Reservation.Status == ReservationStatus.Active ||
                          reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
-                        reservationItem.Reservation.RentalStartAt <= now &&
-                        reservationItem.Reservation.RentalEndAt.AddHours(item.CleaningHours) > now) &&
+                        reservationItem.Reservation.RentalStartAt <= DateTimeOffset.UtcNow &&
+                        reservationItem.Reservation.RentalEndAt > DateTimeOffset.UtcNow) &&
                     !item.OrderItems.Any(orderItem =>
                         orderItem.Order.Status != OrderStatus.Completed &&
                         orderItem.Order.Status != OrderStatus.Cancelled &&
-                        orderItem.Order.Reservation.RentalStartAt <= now &&
-                        orderItem.Order.Reservation.RentalEndAt.AddHours(item.CleaningHours) > now)),
+                        orderItem.Order.Reservation.RentalStartAt <= DateTimeOffset.UtcNow &&
+                        orderItem.Order.Reservation.RentalEndAt > DateTimeOffset.UtcNow)),
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId && item.OrderItems.Any(orderItem => orderItem.Order.Status == OrderStatus.Renting)),
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId && item.ReservationItems.Any(reservationItem =>
                         reservationItem.Reservation.Status == ReservationStatus.Active ||
                         reservationItem.Reservation.Status == ReservationStatus.Overdue)),
-                variant.InventoryItems.Count(item =>
-                    item.BranchId == branchId && item.CleaningUntil > now),
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId && item.Status == InventoryStatus.Maintenance)))
             .ToListAsync(cancellationToken);
@@ -129,15 +131,14 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
             item.Status == InventoryStatus.Usable &&
             item.Variant.IsActive &&
             item.Variant.Product.IsActive &&
-            (item.CleaningUntil == null || item.CleaningUntil <= startAt) &&
             !item.ReservationItems.Any(reservationItem =>
                 (reservationItem.Reservation.Status == ReservationStatus.Active ||
                  reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
                 reservationItem.Reservation.RentalStartAt < endAt &&
-                reservationItem.Reservation.RentalEndAt.AddHours(item.CleaningHours) > startAt) &&
+                reservationItem.Reservation.RentalEndAt > startAt) &&
             !item.OrderItems.Any(orderItem =>
                 orderItem.Order.Status != OrderStatus.Completed &&
                 orderItem.Order.Status != OrderStatus.Cancelled &&
                 orderItem.Order.Reservation.RentalStartAt < endAt &&
-                orderItem.Order.Reservation.RentalEndAt.AddHours(item.CleaningHours) > startAt));
+                orderItem.Order.Reservation.RentalEndAt > startAt));
 }

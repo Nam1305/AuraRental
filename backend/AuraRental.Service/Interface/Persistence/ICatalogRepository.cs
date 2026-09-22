@@ -13,10 +13,10 @@ public interface ICatalogRepository
         CancellationToken cancellationToken);
 
     Task<Product?> GetProduct(Guid branchId, Guid productId, CancellationToken cancellationToken);
-    Task<Product?> GetProductForUpdate(Guid productId, CancellationToken cancellationToken);
+    Task<Product?> GetProductForUpdate(Guid branchId, Guid productId, CancellationToken cancellationToken);
     Task<ProductVariant?> GetVariantForUpdate(Guid variantId, Guid branchId, CancellationToken cancellationToken);
     Task<InventoryItem?> GetInventoryItemForUpdate(Guid inventoryItemId, Guid branchId, CancellationToken cancellationToken);
-    Task<bool> ProductCodeExists(string code, CancellationToken cancellationToken);
+    Task<bool> ProductCodeExists(Guid branchId, string code, CancellationToken cancellationToken);
     Task<bool> VariantSizeExists(Guid productId, string size, CancellationToken cancellationToken);
     Task<bool> AssetCodeExists(IReadOnlyCollection<string> assetCodes, CancellationToken cancellationToken);
     void AddProduct(Product product);

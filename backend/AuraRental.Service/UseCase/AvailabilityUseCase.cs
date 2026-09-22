@@ -1,5 +1,7 @@
 using AuraRental.Service.DTOs.Availability;
 using AuraRental.Service.DTOs.Catalog;
+using AuraRental.Domain.Entities;
+using AuraRental.Domain.Enums;
 using AuraRental.Service.Exceptions;
 using AuraRental.Service.Interface.Persistence;
 using AuraRental.Service.Interface.Service;
@@ -37,12 +39,10 @@ public sealed class AvailabilityUseCase(
             throw new ValidationException("INVALID_LIMIT", "Limit phải nằm trong khoảng 1 đến 100.");
         }
 
-        var items = await availabilityRepository.FindAvailable(
+        var items = await availabilityRepository.FindCandidates(
             requestContext.BranchId,
             query,
             size,
-            startAt,
-            endAt,
             limit,
             cancellationToken);
 
@@ -59,11 +59,9 @@ public sealed class AvailabilityUseCase(
             {
                 var first = group.First();
                 var inventoryItems = group
-                    .Select(item => new AvailableInventoryItemDto(
-                        item.Id,
-                        item.AssetCode,
-                        ApiText.EnumValue(item.Status),
-                        true))
+                    .Select(item => ToAvailabilityItem(item, startAt, endAt))
+                    .OrderByDescending(item => item.AvailableForWholePeriod)
+                    .ThenBy(item => item.AssetCode)
                     .ToList();
 
                 return new AvailabilityGroupDto(
@@ -72,7 +70,7 @@ public sealed class AvailabilityUseCase(
                     group.Key.Name,
                     group.Key.Size,
                     group.Key.Measurements,
-                    inventoryItems.Count,
+                    inventoryItems.Count(item => item.AvailableForWholePeriod),
                     first.Variant.RentalPrices
                         .OrderBy(price => price.Price)
                         .Select(price => new RentalPriceDto(price.PackageCode, ApiText.PackageLabel(price.PackageCode), price.Price))
@@ -83,6 +81,92 @@ public sealed class AvailabilityUseCase(
 
         return new AvailabilityResultDto(new AvailabilityCriteriaDto(startAt, endAt), groups);
     }
+
+    private static AvailableInventoryItemDto ToAvailabilityItem(
+        InventoryItem item,
+        DateTimeOffset startAt,
+        DateTimeOffset endAt)
+    {
+        if (item.Status != InventoryStatus.Usable)
+        {
+            var note = item.Status switch
+            {
+                InventoryStatus.Maintenance => "Đang bảo trì",
+                InventoryStatus.Lost => "Đang thất lạc",
+                InventoryStatus.Retired => "Đã ngừng sử dụng",
+                _ => "Không sẵn sàng"
+            };
+
+            return Unavailable(item, ApiText.EnumValue(item.Status), note);
+        }
+
+        var orderConflict = item.OrderItems
+            .Select(orderItem => orderItem.Order)
+            .Where(order =>
+                order.Status != OrderStatus.Completed &&
+                order.Status != OrderStatus.Cancelled &&
+                order.Reservation.RentalStartAt < endAt &&
+                order.Reservation.RentalEndAt > startAt)
+            .OrderBy(order => order.Reservation.RentalStartAt)
+            .FirstOrDefault();
+
+        if (orderConflict is not null)
+        {
+            var status = orderConflict.Status == OrderStatus.Renting ? "RENTING" : "ORDERED";
+            var note = orderConflict.Status == OrderStatus.Renting ? "Đang cho thuê" : "Đã có đơn trong lịch này";
+            return Unavailable(
+                item,
+                status,
+                note,
+                orderConflict.Reservation.RentalEndAt,
+                orderConflict.OrderNo);
+        }
+
+        var reservationConflict = item.ReservationItems
+            .Select(reservationItem => reservationItem.Reservation)
+            .Where(reservation =>
+                (reservation.Status == ReservationStatus.Active || reservation.Status == ReservationStatus.Overdue) &&
+                reservation.RentalStartAt < endAt &&
+                reservation.RentalEndAt > startAt)
+            .OrderBy(reservation => reservation.RentalStartAt)
+            .FirstOrDefault();
+
+        if (reservationConflict is not null)
+        {
+            return Unavailable(
+                item,
+                "RESERVED",
+                "Đã được giữ chỗ trong lịch này",
+                reservationConflict.RentalEndAt,
+                reservationConflict.ReservationNo);
+        }
+
+        return new AvailableInventoryItemDto(
+            item.Id,
+            item.AssetCode,
+            ApiText.EnumValue(item.Status),
+            true,
+            "AVAILABLE",
+            null,
+            null,
+            null);
+    }
+
+    private static AvailableInventoryItemDto Unavailable(
+        InventoryItem item,
+        string availabilityStatus,
+        string note,
+        DateTimeOffset? busyUntil = null,
+        string? referenceNo = null) =>
+        new(
+            item.Id,
+            item.AssetCode,
+            ApiText.EnumValue(item.Status),
+            false,
+            availabilityStatus,
+            note,
+            busyUntil,
+            referenceNo);
 
     public async Task<IReadOnlyList<InventoryOverviewDto>> GetInventorySummary(
         string? query,

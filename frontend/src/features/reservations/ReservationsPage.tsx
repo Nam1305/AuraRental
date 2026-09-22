@@ -149,6 +149,8 @@ function CreateReservationPanel({ branchId, onCreated }: { branchId: string; onC
     try {
       const result = await searchAvailability(branchId, { query: '', size: '', startAt, endAt })
       setAvailability(result.groups)
+      const availableIds = new Set(result.groups.flatMap((group) => group.items.filter((item) => item.availableForWholePeriod).map((item) => item.inventoryItemId)))
+      setSelected((current) => current.filter((item) => availableIds.has(item.inventoryItemId)))
     } catch (nextError) { setError(nextError as Error) } finally { setLoading(false) }
   }
 
@@ -218,7 +220,7 @@ function CreateReservationPanel({ branchId, onCreated }: { branchId: string; onC
       </div>
       <button className="button" type="button" onClick={() => void findInventory()} disabled={loading}>Kiểm tra đồ trống</button>
 
-      {availability.length > 0 && <div className="compact-products">{availability.map((group) => <article key={group.variantId}><strong>{group.productName} · {group.size}</strong><div className="asset-row">{group.items.map((item) => <button className={selected.some((selectedItem) => selectedItem.inventoryItemId === item.inventoryItemId) ? 'asset-selected' : ''} type="button" key={item.inventoryItemId} onClick={() => toggleAsset(group, item.inventoryItemId, item.assetCode)}>{item.assetCode}</button>)}</div></article>)}</div>}
+      {availability.length > 0 && <div className="compact-products">{availability.map((group) => <article key={group.variantId}><div className="compact-products__heading"><strong>{group.productName} · {group.size}</strong><small>{group.availableCount}/{group.items.length} mã trống</small></div><div className="asset-row">{group.items.map((item) => <button className={`${selected.some((selectedItem) => selectedItem.inventoryItemId === item.inventoryItemId) ? 'asset-selected' : ''}${item.availableForWholePeriod ? '' : ' asset-busy'}`} type="button" key={item.inventoryItemId} disabled={!item.availableForWholePeriod} title={item.availabilityNote ?? undefined} onClick={() => toggleAsset(group, item.inventoryItemId, item.assetCode)}><strong>{item.assetCode}</strong><small>{item.availableForWholePeriod ? 'Trống' : item.availabilityNote}</small></button>)}</div></article>)}</div>}
 
       {selected.length > 0 && <div className="selected-items">{selected.map((item) => <label className="field selected-item" key={item.inventoryItemId}><span>{item.productName} · {item.size} · {item.assetCode}</span><select value={item.packageCode} onChange={(event) => { setQuote(null); setSelected((current) => current.map((candidate) => candidate.inventoryItemId === item.inventoryItemId ? { ...candidate, packageCode: event.target.value } : candidate)) }}>{item.prices.map((price) => <option value={price.packageCode} key={price.packageCode}>{price.label} · {formatMoney(price.price)}</option>)}</select></label>)}</div>}
 

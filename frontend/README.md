@@ -36,7 +36,7 @@ Các màn đăng nhập email/username + password, shell/branch switcher, availa
 - Đơn hàng: theo dõi timeline, xác minh CCCD, bổ sung cọc, chuẩn bị đồ, giao/nhận và hủy theo trạng thái được backend cho phép.
 - Trả đồ: kiểm tra từng món, lập/gửi/duyệt phiếu hoàn, ghi nhận thu thêm và hoàn tất đối soát. Các bước duyệt/settle chỉ hiện với manager.
 
-Reports và settings hiện vẫn là route/boundary có chủ đích. Ảnh hư hại ở màn trả đồ hiện nhận object path; luồng upload file/presigned URL chưa thuộc phạm vi triển khai này.
+Reports và settings hiện vẫn là route/boundary có chủ đích. Ảnh sản phẩm và ảnh hư hại được chọn từ máy staff/manager; frontend xin presigned PUT URL từ backend, upload thẳng lên R2, rồi gửi `objectPath` cho API nghiệp vụ.
 
 ## Chạy local
 

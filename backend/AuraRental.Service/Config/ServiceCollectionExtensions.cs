@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using AuraRental.Service.Options;
 
 namespace AuraRental.Service.Config;
 
@@ -31,6 +32,8 @@ public static class ServiceCollectionExtensions
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 600_000);
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IPasswordService, PasswordService>();
+        services.Configure<R2Options>(configuration.GetSection(R2Options.SectionName));
+        services.AddScoped<IUploadService, R2UploadService>();
         services.AddScoped<IUnitOfWork, AppUnitOfWork>();
 
         services.AddScoped<IUserRepository, UserRepository>();

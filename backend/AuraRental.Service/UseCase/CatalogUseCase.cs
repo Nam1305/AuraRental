@@ -11,7 +11,6 @@ namespace AuraRental.Service.UseCase;
 
 public sealed class CatalogUseCase(
     ICatalogRepository catalogRepository,
-    IAdminRepository adminRepository,
     IUnitOfWork unitOfWork,
     IRequestContext requestContext) : ICatalogUseCase
 {
@@ -31,7 +30,6 @@ public sealed class CatalogUseCase(
             limit,
             cancellationToken);
 
-        var now = DateTimeOffset.UtcNow;
         return products.Select(product =>
         {
             var variants = product.Variants.Where(variant => variant.IsActive).ToList();
@@ -47,7 +45,7 @@ public sealed class CatalogUseCase(
                 product.ImagePaths.FirstOrDefault(),
                 variants.Select(variant => variant.Size).Distinct().Order().ToList(),
                 inventory.Count(item => item.Status != InventoryStatus.Retired && item.Status != InventoryStatus.Lost),
-                inventory.Count(item => item.Status == InventoryStatus.Usable && (item.CleaningUntil == null || item.CleaningUntil <= now)),
+                inventory.Count(item => item.Status == InventoryStatus.Usable),
                 prices.Count == 0 ? null : prices.Min(price => price.Price),
                 prices.Select(price => price.PackageCode).Distinct().Order().ToList());
         }).ToList();
@@ -77,9 +75,9 @@ public sealed class CatalogUseCase(
     {
         ValidateProduct(request.Code, request.Name, request.Category, request.Variants);
         var code = request.Code.Trim().ToUpperInvariant();
-        if (await catalogRepository.ProductCodeExists(code, cancellationToken))
+        if (await catalogRepository.ProductCodeExists(requestContext.BranchId, code, cancellationToken))
         {
-            throw new ConflictException("PRODUCT_CODE_EXISTS", "Mã sản phẩm đã tồn tại; hãy thêm giá/kho vào sản phẩm hiện có.");
+            throw new ConflictException("PRODUCT_CODE_EXISTS", "Mã sản phẩm đã tồn tại tại chi nhánh này.");
         }
 
         var assetCodes = request.Variants.SelectMany(variant => variant.InventoryItems)
@@ -90,10 +88,10 @@ public sealed class CatalogUseCase(
             throw new ConflictException("ASSET_CODE_EXISTS", "Có mã vật lý đã tồn tại.");
         }
 
-        var settings = await adminRepository.GetSettings(false, cancellationToken) ?? new Setting();
         var product = new Product
         {
             Id = Guid.NewGuid(),
+            BranchId = requestContext.BranchId,
             Code = code,
             Name = request.Name.Trim(),
             Category = request.Category.Trim().ToUpperInvariant(),
@@ -101,7 +99,7 @@ public sealed class CatalogUseCase(
             Material = request.Material?.Trim(),
             Description = request.Description?.Trim(),
             ImagePaths = NormalizePaths(request.ImagePaths),
-            Variants = request.Variants.Select(variant => CreateVariantEntity(variant, settings.DefaultCleaningHours)).ToList()
+            Variants = request.Variants.Select(CreateVariantEntity).ToList()
         };
         catalogRepository.AddProduct(product);
         await unitOfWork.SaveChanges(cancellationToken);
@@ -119,7 +117,7 @@ public sealed class CatalogUseCase(
             throw new ValidationException("PRODUCT_FIELDS_REQUIRED", "Tên và loại sản phẩm là bắt buộc.");
         }
 
-        var product = await catalogRepository.GetProductForUpdate(productId, cancellationToken)
+        var product = await catalogRepository.GetProductForUpdate(requestContext.BranchId, productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
         product.Name = request.Name.Trim();
         product.Category = request.Category.Trim().ToUpperInvariant();
@@ -138,7 +136,7 @@ public sealed class CatalogUseCase(
         CancellationToken cancellationToken)
     {
         ValidateVariant(request);
-        _ = await catalogRepository.GetProductForUpdate(productId, cancellationToken)
+        _ = await catalogRepository.GetProductForUpdate(requestContext.BranchId, productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
         var size = request.Size.Trim().ToUpperInvariant();
         if (await catalogRepository.VariantSizeExists(productId, size, cancellationToken))
@@ -153,8 +151,7 @@ public sealed class CatalogUseCase(
             throw new ConflictException("ASSET_CODE_EXISTS", "Có mã vật lý đã tồn tại.");
         }
 
-        var settings = await adminRepository.GetSettings(false, cancellationToken) ?? new Setting();
-        var variant = CreateVariantEntity(request, settings.DefaultCleaningHours);
+        var variant = CreateVariantEntity(request);
         variant.ProductId = productId;
         catalogRepository.AddVariant(variant);
         await unitOfWork.SaveChanges(cancellationToken);
@@ -196,15 +193,13 @@ public sealed class CatalogUseCase(
             throw new ConflictException("ASSET_CODE_EXISTS", "Có mã vật lý đã tồn tại.");
         }
 
-        var settings = await adminRepository.GetSettings(false, cancellationToken) ?? new Setting();
         var items = request.Items.Select(item => new InventoryItem
         {
             Id = Guid.NewGuid(),
             VariantId = variantId,
             BranchId = requestContext.BranchId,
             AssetCode = item.AssetCode.Trim().ToUpperInvariant(),
-            Status = InventoryStatus.Usable,
-            CleaningHours = ValidateCleaningHours(item.CleaningHours ?? settings.DefaultCleaningHours)
+            Status = InventoryStatus.Usable
         }).ToList();
         catalogRepository.AddInventoryItems(items);
         await unitOfWork.SaveChanges(cancellationToken);
@@ -225,16 +220,6 @@ public sealed class CatalogUseCase(
             request.Status,
             "INVALID_INVENTORY_STATUS",
             "Trạng thái kho không hợp lệ.");
-        if (request.CleaningHours.HasValue)
-        {
-            item.CleaningHours = ValidateCleaningHours(request.CleaningHours.Value);
-        }
-
-        if (item.Status != InventoryStatus.Usable)
-        {
-            item.CleaningUntil = null;
-        }
-
         await unitOfWork.SaveChanges(cancellationToken);
         return ToInventoryItem(item);
     }
@@ -260,7 +245,7 @@ public sealed class CatalogUseCase(
             inventory.OrderBy(item => item.AssetCode).Select(ToInventoryItem).ToList());
     }
 
-    private ProductVariant CreateVariantEntity(CreateProductVariantInput request, int defaultCleaningHours)
+    private ProductVariant CreateVariantEntity(CreateProductVariantInput request)
     {
         ValidateVariant(request);
         var variant = new ProductVariant
@@ -285,8 +270,7 @@ public sealed class CatalogUseCase(
                 VariantId = variant.Id,
                 BranchId = requestContext.BranchId,
                 AssetCode = item.AssetCode.Trim().ToUpperInvariant(),
-                Status = InventoryStatus.Usable,
-                CleaningHours = ValidateCleaningHours(item.CleaningHours ?? defaultCleaningHours)
+                Status = InventoryStatus.Usable
             });
         }
 
@@ -347,16 +331,6 @@ public sealed class CatalogUseCase(
         }
     }
 
-    private static int ValidateCleaningHours(int value)
-    {
-        if (value is < 0 or > 168)
-        {
-            throw new ValidationException("INVALID_CLEANING_HOURS", "Cleaning hours phải nằm trong khoảng 0 đến 168.");
-        }
-
-        return value;
-    }
-
     private static string[] NormalizePaths(IEnumerable<string> paths) =>
         paths.Select(path => path.Trim()).Where(path => path.Length > 0).Distinct().ToArray();
 
@@ -364,7 +338,7 @@ public sealed class CatalogUseCase(
         new(price.PackageCode, ApiText.PackageLabel(price.PackageCode), price.Price);
 
     private static InventoryItemDto ToInventoryItem(InventoryItem item) =>
-        new(item.Id, item.AssetCode, ApiText.EnumValue(item.Status), item.CleaningHours, item.CleaningUntil);
+        new(item.Id, item.AssetCode, ApiText.EnumValue(item.Status));
 
     private void EnsureManager()
     {

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { AsyncState } from '@/shared/components/AsyncState'
+import { formatDateTime } from '@/shared/format/date'
 import { formatMoney } from '@/shared/format/money'
 import { useSession } from '@/features/session/SessionProvider'
 import { searchAvailability } from './availability.api'
@@ -44,8 +45,8 @@ export function AvailabilityPage() {
     <section className="page-stack">
       <header className="page-heading">
         <span className="eyebrow">Tư vấn qua Instagram</span>
-        <h1>Tìm đồ trống</h1>
-        <p>Chọn đúng lịch khách cần. Kết quả tra cứu chưa giữ đồ.</p>
+        <h1>Tìm đồ theo lịch</h1>
+        <p>Xem cả đồ trống và đồ đang bận. Kết quả tra cứu chưa giữ đồ.</p>
       </header>
 
       <form className="panel search-form" onSubmit={submit}>
@@ -84,7 +85,7 @@ export function AvailabilityPage() {
           />
         </label>
         <button className="button button--primary" type="submit" disabled={loading || !activeBranchId}>
-          {loading ? 'Đang kiểm tra…' : 'Kiểm tra lịch trống'}
+          {loading ? 'Đang kiểm tra…' : 'Kiểm tra lịch đồ'}
         </button>
       </form>
 
@@ -98,15 +99,29 @@ export function AvailabilityPage() {
                     <h2>{group.productName} · {group.size}</h2>
                     <p>{group.measurements ?? 'Chưa có số đo'}</p>
                   </div>
-                  <span className="availability-pill">{group.availableCount} mã trống</span>
+                  <span className="availability-pill">{group.availableCount}/{group.items.length} mã trống</span>
                 </div>
                 <div className="price-row">
                   {group.prices.map((price) => (
                     <span key={price.packageCode}>{price.label} · {formatMoney(price.price)}</span>
                   ))}
                 </div>
-                <div className="asset-row">
-                  {group.items.map((item) => <button type="button" key={item.inventoryItemId}>{item.assetCode}</button>)}
+                <div className="availability-assets">
+                  {group.items.map((item) => (
+                    <div className={item.availableForWholePeriod ? 'availability-asset' : 'availability-asset availability-asset--busy'} key={item.inventoryItemId}>
+                      <div><strong>{item.assetCode}</strong><span>{item.availableForWholePeriod ? 'Trống toàn bộ lịch' : item.availabilityNote}</span></div>
+                      <span className={item.availableForWholePeriod ? 'availability-state availability-state--free' : 'availability-state availability-state--busy'}>
+                        {item.availableForWholePeriod ? 'Có thể chọn' : 'Đang bận'}
+                      </span>
+                      {!item.availableForWholePeriod && (item.busyUntil || item.referenceNo) && (
+                        <small>
+                          {item.referenceNo ? `Mã ${item.referenceNo}` : ''}
+                          {item.referenceNo && item.busyUntil ? ' · ' : ''}
+                          {item.busyUntil ? `Bận đến ${formatDateTime(item.busyUntil)}` : ''}
+                        </small>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </article>
             ))}

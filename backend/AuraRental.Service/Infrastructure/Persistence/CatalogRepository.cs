@@ -17,6 +17,7 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
         var products = context.Products
             .AsNoTracking()
             .AsSplitQuery()
+            .Where(product => product.BranchId == branchId)
             .Include(product => product.Variants.Where(variant => variant.IsActive))
                 .ThenInclude(variant => variant.InventoryItems.Where(item => item.BranchId == branchId))
             .Include(product => product.Variants.Where(variant => variant.IsActive))
@@ -55,10 +56,10 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
                 .ThenInclude(variant => variant.InventoryItems.Where(item => item.BranchId == branchId))
             .Include(product => product.Variants)
                 .ThenInclude(variant => variant.RentalPrices.Where(price => price.BranchId == branchId))
-            .FirstOrDefaultAsync(product => product.Id == productId, cancellationToken);
+            .FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);
 
-    public Task<Product?> GetProductForUpdate(Guid productId, CancellationToken cancellationToken) =>
-        context.Products.FirstOrDefaultAsync(product => product.Id == productId, cancellationToken);
+    public Task<Product?> GetProductForUpdate(Guid branchId, Guid productId, CancellationToken cancellationToken) =>
+        context.Products.FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);
 
     public Task<ProductVariant?> GetVariantForUpdate(
         Guid variantId,
@@ -67,7 +68,7 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
         context.ProductVariants
             .Include(variant => variant.Product)
             .Include(variant => variant.RentalPrices.Where(price => price.BranchId == branchId))
-            .FirstOrDefaultAsync(variant => variant.Id == variantId, cancellationToken);
+            .FirstOrDefaultAsync(variant => variant.Id == variantId && variant.Product.BranchId == branchId, cancellationToken);
 
     public Task<InventoryItem?> GetInventoryItemForUpdate(
         Guid inventoryItemId,
@@ -77,8 +78,8 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
             item => item.Id == inventoryItemId && item.BranchId == branchId,
             cancellationToken);
 
-    public Task<bool> ProductCodeExists(string code, CancellationToken cancellationToken) =>
-        context.Products.AnyAsync(product => product.Code == code, cancellationToken);
+    public Task<bool> ProductCodeExists(Guid branchId, string code, CancellationToken cancellationToken) =>
+        context.Products.AnyAsync(product => product.BranchId == branchId && product.Code == code, cancellationToken);
 
     public Task<bool> VariantSizeExists(Guid productId, string size, CancellationToken cancellationToken) =>
         context.ProductVariants.AnyAsync(

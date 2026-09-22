@@ -77,7 +77,8 @@ public sealed class AuraRentalDbContext(DbContextOptions<AuraRentalDbContext> op
         {
             entity.ToTable("products");
             entity.HasKey(item => item.Id);
-            entity.HasIndex(item => item.Code).IsUnique();
+            entity.HasIndex(item => new { item.BranchId, item.Code }).IsUnique();
+            entity.HasOne(item => item.Branch).WithMany(item => item.Products).HasForeignKey(item => item.BranchId);
         });
 
         modelBuilder.Entity<ProductVariant>(entity =>

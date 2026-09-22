@@ -143,7 +143,6 @@ public sealed class AdminUseCase(
         }
 
         settings.SlotDepositAmount = request.SlotDepositAmount;
-        settings.DefaultCleaningHours = request.DefaultCleaningHours;
         settings.ExtraDayRate = request.ExtraDayRate;
         await unitOfWork.SaveChanges(cancellationToken);
         return ToSettings(settings);
@@ -166,7 +165,6 @@ public sealed class AdminUseCase(
 
     private static SettingsDto ToSettings(Setting setting) => new(
         setting.SlotDepositAmount,
-        setting.DefaultCleaningHours,
         setting.ExtraDayRate,
         ["12H", "1D", "2D", "3D"]);
 
@@ -188,10 +186,9 @@ public sealed class AdminUseCase(
 
     private static void ValidateSettings(UpdateSettingsRequest request)
     {
-        if (request.SlotDepositAmount <= 0 || request.DefaultCleaningHours is < 0 or > 168 ||
-            request.ExtraDayRate is <= 0 or > 1)
+        if (request.SlotDepositAmount <= 0 || request.ExtraDayRate is <= 0 or > 1)
         {
-            throw new ValidationException("INVALID_SETTINGS", "Cọc giữ chỗ phải lớn hơn 0 và cleaning hours từ 0 đến 168.");
+            throw new ValidationException("INVALID_SETTINGS", "Cọc giữ chỗ phải lớn hơn 0 và tỷ lệ ngày thêm phải nằm trong khoảng hợp lệ.");
         }
     }
 

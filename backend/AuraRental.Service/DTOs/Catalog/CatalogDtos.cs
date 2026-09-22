@@ -39,7 +39,7 @@ public sealed record ProductDetailDto(
     IReadOnlyList<ProductVariantDto> Variants);
 
 public sealed record RentalPriceInput(string PackageCode, decimal Price);
-public sealed record InventoryItemInput(string AssetCode, int? CleaningHours);
+public sealed record InventoryItemInput(string AssetCode);
 
 public sealed record CreateProductVariantInput(
     string Size,
@@ -75,5 +75,5 @@ public sealed record RentalPriceSetDto(
     bool EffectiveForNewReservationsOnly);
 
 public sealed record AddInventoryItemsRequest(IReadOnlyList<InventoryItemInput> Items);
-public sealed record InventoryItemDto(Guid Id, string AssetCode, string Status, int CleaningHours, DateTimeOffset? CleaningUntil);
-public sealed record UpdateInventoryItemRequest(string Status, int? CleaningHours);
+public sealed record InventoryItemDto(Guid Id, string AssetCode, string Status);
+public sealed record UpdateInventoryItemRequest(string Status);

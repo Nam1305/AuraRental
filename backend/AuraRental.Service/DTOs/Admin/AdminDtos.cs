@@ -17,8 +17,7 @@ public sealed record ReplaceUserBranchesRequest(IReadOnlyList<Guid> BranchIds);
 
 public sealed record SettingsDto(
     decimal SlotDepositAmount,
-    int DefaultCleaningHours,
     decimal ExtraDayRate,
     IReadOnlyList<string> SupportedPackageCodes);
 
-public sealed record UpdateSettingsRequest(decimal SlotDepositAmount, int DefaultCleaningHours, decimal ExtraDayRate);
+public sealed record UpdateSettingsRequest(decimal SlotDepositAmount, decimal ExtraDayRate);

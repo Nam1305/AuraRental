@@ -16,10 +16,10 @@ Luồng phụ thuộc chỉ đi theo chiều `WebAPI -> Service -> Domain`. Cont
 - Đăng nhập nội bộ bằng email/username + password hash; backend phát JWT có `sub = users.id`.
 - Request context theo user và middleware kiểm tra `X-Branch-Id` với `user_branches`.
 - Response/error envelope, request ID và exception middleware.
-- `GET /health`.
+- `GET /health` và `GET /api/v1/health`: public, luôn trả `200` khi API process hoạt động, không truy cập database; dùng được cho Render health check/cron ping.
 - `GET /api/v1/me`, `GET /api/v1/branches`.
 - `GET /api/v1/products`, `GET /api/v1/products/{id}`.
-- `GET /api/v1/availability` có kiểm tra reservation, order và cleaning buffer.
+- `GET /api/v1/availability` có kiểm tra reservation và order trùng lịch.
 - Customer search/create/update và lịch sử thuê theo các branch user được truy cập.
 - Quote, reservation, payment ban đầu, đổi lịch/mã, gia hạn, hủy và cấp lại OTP.
 - Public rental form có rate limit, verify token/OTP và chỉ tự sinh một order cho mỗi reservation.
@@ -30,7 +30,7 @@ Luồng phụ thuộc chỉ đi theo chiều `WebAPI -> Service -> Domain`. Cont
 - Dashboard ngày, report theo branch/toàn hệ thống và SignalR `OrderCreated` theo group branch.
 - Idempotency bền vững cho write API: response được mã hóa bằng Data Protection trước khi lưu 24 giờ.
 
-Hai integration cần adapter hạ tầng trước khi mở production là `POST /uploads/presign` (private object storage) và render `GET /refunds/{id}/receipt.png`. Backend không trả URL upload giả hoặc PNG giả khi chưa có storage/renderer.
+Integration còn lại cần adapter hạ tầng trước khi mở production là render `GET /refunds/{id}/receipt.png`. Upload ảnh dùng `POST /api/v1/uploads/presign`: backend chỉ ký URL PUT ngắn hạn, còn trình duyệt upload trực tiếp vào Cloudflare R2 và lưu `objectPath` vào API nghiệp vụ.
 
 ## Quy ước code
 
@@ -66,6 +66,12 @@ Authentication__AccessTokenMinutes
 Cors__Origins__0
 Security__TokenPepper
 Frontend__BaseUrl
+R2__AccountId
+R2__AccessKeyId
+R2__SecretAccessKey
+R2__BucketName
+R2__Endpoint                         # optional; mặc định https://<AccountId>.r2.cloudflarestorage.com
+R2__UploadUrlLifetimeSeconds         # optional; mặc định 300, từ 60 đến 3600
 ```
 
 Không đưa secret production vào `appsettings.json`. `SigningKey` hiện tại chỉ dùng local và phải được override bằng secret ngoài source khi deploy.

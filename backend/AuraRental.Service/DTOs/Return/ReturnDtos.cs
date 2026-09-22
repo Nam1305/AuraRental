@@ -83,7 +83,7 @@ public sealed record SettleRefundRequest(
     string? ProofPath,
     DateTimeOffset PaidAt);
 
-public sealed record SettledInventoryDto(Guid InventoryItemId, string Status, DateTimeOffset? CleaningUntil);
+public sealed record SettledInventoryDto(Guid InventoryItemId, string Status);
 
 public sealed record SettleRefundDto(
     string SettlementType,

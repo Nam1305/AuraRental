@@ -9,6 +9,10 @@ export type AvailableItem = {
   assetCode: string
   status: string
   availableForWholePeriod: boolean
+  availabilityStatus: string
+  availabilityNote: string | null
+  busyUntil: string | null
+  referenceNo: string | null
 }
 
 export type AvailabilityGroup = {
