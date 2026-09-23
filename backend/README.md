@@ -21,7 +21,7 @@ Luồng phụ thuộc chỉ đi theo chiều `WebAPI -> Service -> Domain`. Cont
 - `GET /api/v1/products`, `GET /api/v1/products/{id}`.
 - `GET /api/v1/availability` có kiểm tra reservation và order trùng lịch.
 - Customer search/create/update và lịch sử thuê theo các branch user được truy cập.
-- Quote, reservation, payment ban đầu, đổi lịch/mã, gia hạn, hủy và cấp lại OTP.
+- Quote, reservation, payment ban đầu, đổi lịch/mã, hủy và cấp lại OTP.
 - Public rental form có rate limit, verify token/OTP và chỉ tự sinh một order cho mỗi reservation.
 - Order list/detail, checklist CCCD Instagram, cọc bổ sung, payment confirm/void và fulfillment.
 - Return inspection theo từng item, refund version, submit/review/approve/revision/settlement.

@@ -20,7 +20,7 @@ public sealed class AdminRepository(AuraRentalDbContext context) : IAdminReposit
     {
         var hasReservation = await context.Reservations.AnyAsync(reservation =>
             reservation.BranchId == branchId &&
-            (reservation.Status == ReservationStatus.Active || reservation.Status == ReservationStatus.Overdue), cancellationToken);
+            reservation.Status == ReservationStatus.Active, cancellationToken);
         return hasReservation || await context.Orders.AnyAsync(order =>
             order.BranchId == branchId &&
             order.Status != OrderStatus.Completed &&

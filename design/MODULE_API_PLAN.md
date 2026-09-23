@@ -91,7 +91,7 @@ Backend phải transaction + lock các `inventory_items` theo thứ tự ID cố
 ```text
 User role: STAFF | MANAGER
 Inventory: USABLE | MAINTENANCE | RETIRED | LOST
-Reservation: ACTIVE | OVERDUE | CONVERTED_TO_ORDER | CANCELLED
+Reservation: ACTIVE | CONVERTED_TO_ORDER | CANCELLED
 Order: PENDING_DEPOSIT | PENDING_VERIFICATION | CONFIRMED |
        PREPARING | RENTING | INSPECTING | COMPLETED | CANCELLED
 Payment type: SLOT_DEPOSIT | TARGET_DEPOSIT | ADDITIONAL_COLLECTION |
@@ -203,7 +203,7 @@ Quy tắc frontend:
 
 ### Mô tả
 
-Tóm tắt công việc cần xử lý của đúng chi nhánh: chờ cọc, giữ chỗ sắp/quá hạn, giao nhận, trả đồ và hoàn tiền.
+Tóm tắt công việc cần xử lý của đúng chi nhánh: chờ cọc, giữ chỗ đang hoạt động, giao nhận, trả đồ và hoàn tiền.
 
 ### Màn hình: Hôm nay
 
@@ -233,8 +233,7 @@ Response:
       "pendingDeposit": 3,
       "activeReservations": 2,
       "returnsDue": 1,
-      "refundsWaitingApproval": 2,
-      "overdueReservations": 1
+      "refundsWaitingApproval": 2
     },
     "nextTask": {
       "type": "CONFIRM_DEPOSIT",
@@ -537,7 +536,6 @@ Idempotency-Key: <uuid>
   "rentalStartAt": "2026-09-25T14:00:00+07:00",
   "rentalEndAt": "2026-09-28T14:00:00+07:00",
   "depositPlan": "FIFTY_WITH_ID",
-  "depositDeadlineAt": "2026-09-22T18:00:00+07:00",
   "items": [
     {
       "inventoryItemId": "inventory_uuid",
@@ -569,8 +567,7 @@ Response `201`:
       "plan": "FIFTY_WITH_ID",
       "required": 600000,
       "confirmedReceived": 100000,
-      "remaining": 500000,
-      "deadlineAt": "2026-09-22T18:00:00+07:00"
+      "remaining": 500000
     },
     "items": [
       {
@@ -604,14 +601,13 @@ Lỗi chính:
 
 - `409 INVENTORY_NOT_AVAILABLE`.
 - `409 PRICE_CHANGED`: trả quote mới để staff xác nhận lại.
-- `400 DEPOSIT_DEADLINE_REQUIRED`: cọc slot nhưng thiếu hạn chốt.
 - `400 PAYMENT_AMOUNT_INVALID`.
 - `400 PACKAGE_NOT_OFFERED_AT_BRANCH`.
 
 ### API: danh sách reservation
 
 ```http
-GET /api/v1/reservations?status=ACTIVE,OVERDUE&deadlineTo=2026-09-23T23:59:59%2B07:00&query=Ngoc%20Anh&cursor=&limit=20
+GET /api/v1/reservations?status=ACTIVE&query=Ngoc%20Anh&cursor=&limit=20
 X-Branch-Id: branch_sg_uuid
 ```
 
@@ -632,7 +628,6 @@ Response item:
   "rentalEndAt": "2026-09-28T14:00:00+07:00",
   "depositConfirmed": 100000,
   "depositRemaining": 500000,
-  "depositDeadlineAt": "2026-09-22T18:00:00+07:00",
   "formStatus": "NOT_SUBMITTED"
 }
 ```
@@ -644,11 +639,11 @@ GET /api/v1/reservations/{reservationId}
 X-Branch-Id: branch_sg_uuid
 ```
 
-Trả đầy đủ customer, lịch, items snapshot, tổng tiền confirmed, deadline, trạng thái form; không trả `otp_hash` hoặc `form_token_hash`.
+Trả đầy đủ customer, lịch, items snapshot, tổng tiền confirmed và trạng thái form; không trả `otp_hash` hoặc `form_token_hash`.
 
 ### API: đổi lịch, mã hoặc gói trước khi có order
 
-Chỉ áp dụng reservation `ACTIVE/OVERDUE` chưa convert. Backend lock mã cũ và mã mới, tính lại toàn bộ giá/cọc.
+Chỉ áp dụng reservation `ACTIVE` chưa convert. Backend lock mã cũ và mã mới, tính lại toàn bộ giá/cọc.
 
 ```http
 PUT /api/v1/reservations/{reservationId}/rental-selection
@@ -720,18 +715,7 @@ Response:
 }
 ```
 
-### API: gia hạn hoặc hủy reservation
-
-```http
-POST /api/v1/reservations/{reservationId}/extend-deadline
-```
-
-```json
-{
-  "depositDeadlineAt": "2026-09-23T18:00:00+07:00",
-  "reason": "Khách hẹn chuyển phần còn lại ngày mai"
-}
-```
+### API: hủy reservation
 
 ```http
 POST /api/v1/reservations/{reservationId}/cancel
@@ -1886,7 +1870,7 @@ Không thiết kế `GET /notifications` cho đến khi quyết định cần l�
 
 ### Availability
 
-- Kiểm tra reservation `ACTIVE/OVERDUE` và order chưa `COMPLETED/CANCELLED` giao thời gian.
+- Kiểm tra reservation `ACTIVE` và order chưa `COMPLETED/CANCELLED` giao thời gian.
 - Tính cả `cleaning_until` và cleaning buffer snapshot.
 - `MAINTENANCE`, `RETIRED`, `LOST` không available.
 
@@ -1941,7 +1925,6 @@ Các gap này không ngăn build phần đọc/search mockup, nhưng phải ch�
 2. Customer search/create.
 3. Quote.
 4. Reservation + initial payment + OTP/link.
-5. Deadline/overdue job.
 
 ### Phase 3 — order và vận hành
 

@@ -4,8 +4,7 @@ public sealed record DashboardCountersDto(
     int PendingDeposit,
     int ActiveReservations,
     int ReturnsDue,
-    int RefundsWaitingApproval,
-    int OverdueReservations);
+    int RefundsWaitingApproval);
 
 public sealed record DashboardTaskDto(
     string Type,

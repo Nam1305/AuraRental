@@ -102,8 +102,7 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
                     item.BranchId == branchId &&
                     item.Status == InventoryStatus.Usable &&
                     !item.ReservationItems.Any(reservationItem =>
-                        (reservationItem.Reservation.Status == ReservationStatus.Active ||
-                         reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
+                        reservationItem.Reservation.Status == ReservationStatus.Active &&
                         reservationItem.Reservation.RentalStartAt <= DateTimeOffset.UtcNow &&
                         reservationItem.Reservation.RentalEndAt > DateTimeOffset.UtcNow) &&
                     !item.OrderItems.Any(orderItem =>
@@ -115,8 +114,7 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
                     item.BranchId == branchId && item.OrderItems.Any(orderItem => orderItem.Order.Status == OrderStatus.Renting)),
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId && item.ReservationItems.Any(reservationItem =>
-                        reservationItem.Reservation.Status == ReservationStatus.Active ||
-                        reservationItem.Reservation.Status == ReservationStatus.Overdue)),
+                        reservationItem.Reservation.Status == ReservationStatus.Active)),
                 variant.InventoryItems.Count(item =>
                     item.BranchId == branchId && item.Status == InventoryStatus.Maintenance)))
             .ToListAsync(cancellationToken);
@@ -132,8 +130,7 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
             item.Variant.IsActive &&
             item.Variant.Product.IsActive &&
             !item.ReservationItems.Any(reservationItem =>
-                (reservationItem.Reservation.Status == ReservationStatus.Active ||
-                 reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
+                reservationItem.Reservation.Status == ReservationStatus.Active &&
                 reservationItem.Reservation.RentalStartAt < endAt &&
                 reservationItem.Reservation.RentalEndAt > startAt) &&
             !item.OrderItems.Any(orderItem =>

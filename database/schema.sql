@@ -101,7 +101,6 @@ CREATE TABLE reservations (
     rental_end_at timestamptz NOT NULL,
     deposit_plan text NOT NULL,
     deposit_required numeric(14,0) NOT NULL,
-    deposit_deadline_at timestamptz,
     otp_hash text,
     form_token_hash text UNIQUE,
     otp_expires_at timestamptz,

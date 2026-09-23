@@ -17,7 +17,7 @@ export const getReservation = (branchId: string, reservationId: string) =>
 
 export function createQuote(
   branchId: string,
-  input: Omit<CreateReservationInput, 'depositDeadlineAt' | 'receivedPayment'>,
+  input: Omit<CreateReservationInput, 'receivedPayment'>,
 ) {
   return apiRequest<Quote>('/api/v1/quotes', {
     method: 'POST',
@@ -39,9 +39,6 @@ export function createReservation(branchId: string, input: CreateReservationInpu
       ...input,
       rentalStartAt: new Date(input.rentalStartAt).toISOString(),
       rentalEndAt: new Date(input.rentalEndAt).toISOString(),
-      depositDeadlineAt: input.depositDeadlineAt
-        ? new Date(input.depositDeadlineAt).toISOString()
-        : null,
     }),
   })
 }
@@ -56,19 +53,6 @@ export const reissueOtp = (branchId: string, reservationId: string, reason: stri
       body: JSON.stringify({ reason }),
     },
   )
-
-export const extendDeadline = (
-  branchId: string,
-  reservationId: string,
-  depositDeadlineAt: string,
-  reason: string,
-) =>
-  apiRequest<ReservationDetail>(`/api/v1/reservations/${reservationId}/extend-deadline`, {
-    method: 'POST',
-    branchId,
-    headers: idempotencyHeaders(),
-    body: JSON.stringify({ depositDeadlineAt: new Date(depositDeadlineAt).toISOString(), reason }),
-  })
 
 export const cancelReservation = (branchId: string, reservationId: string, reason: string) =>
   apiRequest(`/api/v1/reservations/${reservationId}/cancel`, {

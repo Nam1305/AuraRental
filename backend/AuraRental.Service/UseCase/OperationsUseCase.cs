@@ -23,7 +23,6 @@ public sealed class OperationsUseCase(
             branch.Id,
             fromUtc,
             toUtc,
-            DateTimeOffset.UtcNow,
             cancellationToken);
         var tasks = await operationsRepository.GetDashboardTasks(branch.Id, fromUtc, toUtc, cancellationToken);
         return new DashboardDto(
@@ -35,8 +34,7 @@ public sealed class OperationsUseCase(
                 counts.PendingDeposit,
                 counts.ActiveReservations,
                 counts.ReturnsDue,
-                counts.RefundsWaitingApproval,
-                counts.OverdueReservations),
+                counts.RefundsWaitingApproval),
             tasks.FirstOrDefault(),
             tasks);
     }

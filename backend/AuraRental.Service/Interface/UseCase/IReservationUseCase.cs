@@ -7,7 +7,6 @@ public interface IReservationUseCase
     Task<ReservationDto> Create(CreateReservationRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<ReservationListItemDto>> Search(
         string? status,
-        DateTimeOffset? deadlineTo,
         string? query,
         int limit,
         CancellationToken cancellationToken);
@@ -16,10 +15,6 @@ public interface IReservationUseCase
     Task<ReservationDto> UpdateRentalSelection(
         Guid reservationId,
         UpdateRentalSelectionRequest request,
-        CancellationToken cancellationToken);
-    Task<ReservationDto> ExtendDeadline(
-        Guid reservationId,
-        ExtendReservationDeadlineRequest request,
         CancellationToken cancellationToken);
     Task<CancelReservationDto> Cancel(
         Guid reservationId,

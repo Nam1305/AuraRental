@@ -55,7 +55,7 @@ public sealed class ReservationUseCase(
             request.ReceivedPayment.Type,
             "INVALID_PAYMENT_TYPE",
             "Giao dịch đầu tiên phải là SLOT_DEPOSIT hoặc TARGET_DEPOSIT.");
-        ValidateInitialPayment(paymentType, request.ReceivedPayment.Amount, depositRequired, request.DepositDeadlineAt,
+        ValidateInitialPayment(paymentType, request.ReceivedPayment.Amount, depositRequired,
             await quoteRepository.GetSlotDepositAmount(cancellationToken));
 
         var now = DateTimeOffset.UtcNow;
@@ -70,7 +70,6 @@ public sealed class ReservationUseCase(
             RentalEndAt = request.RentalEndAt.ToUniversalTime(),
             DepositPlan = request.DepositPlan.ToUpperInvariant(),
             DepositRequired = depositRequired,
-            DepositDeadlineAt = request.DepositDeadlineAt?.ToUniversalTime(),
             OtpHash = secureTokenService.Hash(credentials.Otp),
             FormTokenHash = secureTokenService.Hash(credentials.Token),
             OtpExpiresAt = credentials.ExpiresAt,
@@ -109,7 +108,6 @@ public sealed class ReservationUseCase(
 
     public async Task<IReadOnlyList<ReservationListItemDto>> Search(
         string? status,
-        DateTimeOffset? deadlineTo,
         string? query,
         int limit,
         CancellationToken cancellationToken)
@@ -122,7 +120,6 @@ public sealed class ReservationUseCase(
         var reservations = await rentalRepository.SearchReservations(
             requestContext.BranchId,
             statuses,
-            deadlineTo,
             query,
             limit,
             cancellationToken);
@@ -130,7 +127,7 @@ public sealed class ReservationUseCase(
         return reservations.Select(reservation => new ReservationListItemDto(
             reservation.Id,
             reservation.ReservationNo,
-            ApiText.EnumValue(GetEffectiveStatus(reservation)),
+            ApiText.EnumValue(reservation.Status),
             reservation.CustomerId,
             reservation.Customer.Name,
             RentalRules.MaskPhone(reservation.Customer.Phone),
@@ -139,7 +136,6 @@ public sealed class ReservationUseCase(
             reservation.RentalEndAt,
             RentalRules.ConfirmedDeposit(reservation.Payments),
             RentalRules.DepositRemaining(reservation),
-            reservation.DepositDeadlineAt,
             reservation.Order is null ? "NOT_SUBMITTED" : "SUBMITTED")).ToList();
     }
 
@@ -222,29 +218,6 @@ public sealed class ReservationUseCase(
         reservation.RentalStartAt = request.RentalStartAt.ToUniversalTime();
         reservation.RentalEndAt = request.RentalEndAt.ToUniversalTime();
         reservation.DepositRequired = reservation.Items.Sum(item => item.ReplacementValue) * RentalRules.GetDepositRatio(reservation.DepositPlan);
-        await unitOfWork.SaveChanges(cancellationToken);
-        await transaction.Commit(cancellationToken);
-        return ToDto(reservation, null);
-    }
-
-    public async Task<ReservationDto> ExtendDeadline(
-        Guid reservationId,
-        ExtendReservationDeadlineRequest request,
-        CancellationToken cancellationToken)
-    {
-        _ = RequireText(request.Reason, "EXTEND_REASON_REQUIRED", "Cần nhập lý do gia hạn.");
-        if (request.DepositDeadlineAt <= DateTimeOffset.UtcNow)
-        {
-            throw new ValidationException("INVALID_DEPOSIT_DEADLINE", "Hạn cọc mới phải ở tương lai.");
-        }
-
-        await using var transaction = await unitOfWork.BeginTransaction(cancellationToken);
-        _ = await rentalRepository.LockReservation(reservationId, cancellationToken)
-            ?? throw new NotFoundException("RESERVATION_NOT_FOUND", "Không tìm thấy reservation.");
-        var reservation = await GetRequired(reservationId, true, cancellationToken);
-        EnsureEditable(reservation);
-        reservation.DepositDeadlineAt = request.DepositDeadlineAt.ToUniversalTime();
-        reservation.Status = ReservationStatus.Active;
         await unitOfWork.SaveChanges(cancellationToken);
         await transaction.Commit(cancellationToken);
         return ToDto(reservation, null);
@@ -392,7 +365,6 @@ public sealed class ReservationUseCase(
         PaymentType paymentType,
         decimal amount,
         decimal depositRequired,
-        DateTimeOffset? deadline,
         decimal slotDepositAmount)
     {
         if (paymentType == PaymentType.SlotDeposit)
@@ -400,11 +372,6 @@ public sealed class ReservationUseCase(
             if (amount != slotDepositAmount)
             {
                 throw new ValidationException("PAYMENT_AMOUNT_INVALID", $"Cọc giữ chỗ phải đúng {slotDepositAmount:N0} VND.");
-            }
-
-            if (!deadline.HasValue || deadline <= DateTimeOffset.UtcNow)
-            {
-                throw new ValidationException("DEPOSIT_DEADLINE_REQUIRED", "Cọc giữ chỗ cần hạn chốt cọc còn lại ở tương lai.");
             }
 
             return;
@@ -422,7 +389,7 @@ public sealed class ReservationUseCase(
         return new ReservationDto(
             reservation.Id,
             reservation.ReservationNo,
-            ApiText.EnumValue(GetEffectiveStatus(reservation)),
+            ApiText.EnumValue(reservation.Status),
             new ReservationBranchDto(reservation.Branch.Id, reservation.Branch.Code, reservation.Branch.Name),
             new ReservationCustomerDto(reservation.Customer.Id, reservation.Customer.Name, reservation.Customer.Phone),
             reservation.RentalStartAt,
@@ -431,8 +398,7 @@ public sealed class ReservationUseCase(
                 reservation.DepositPlan,
                 reservation.DepositRequired,
                 confirmed,
-                Math.Max(0, reservation.DepositRequired - confirmed),
-                reservation.DepositDeadlineAt),
+                Math.Max(0, reservation.DepositRequired - confirmed)),
             reservation.Items.Select(item => new ReservationItemDto(
                 item.InventoryItemId,
                 item.InventoryItem.AssetCode,
@@ -445,19 +411,12 @@ public sealed class ReservationUseCase(
             reservation.CreatedAt);
     }
 
-    private static ReservationStatus GetEffectiveStatus(Reservation reservation) =>
-        reservation.Status == ReservationStatus.Active &&
-        reservation.DepositDeadlineAt < DateTimeOffset.UtcNow &&
-        RentalRules.DepositRemaining(reservation) > 0
-            ? ReservationStatus.Overdue
-            : reservation.Status;
-
     private static string ItemSummary(ReservationItem item) =>
         $"{item.InventoryItem.Variant.Product.Name} {item.InventoryItem.Variant.Size} · {item.InventoryItem.AssetCode}";
 
     private static void EnsureEditable(Reservation reservation)
     {
-        if (reservation.Status is not (ReservationStatus.Active or ReservationStatus.Overdue) || reservation.Order is not null)
+        if (reservation.Status != ReservationStatus.Active || reservation.Order is not null)
         {
             throw new ConflictException("RESERVATION_NOT_EDITABLE", "Reservation không còn có thể chỉnh sửa.");
         }

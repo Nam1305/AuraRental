@@ -7,7 +7,7 @@
 | Vai trò | Quyền chính |
 |---|---|
 | **Staff** | Kiểm tra availability, tư vấn giá, xác nhận giao dịch, tạo reservation, cấp mã/OTP/link form, xác nhận cọc còn lại, giao/nhận đồ, ghi nhận hư hại và gửi đề nghị hoàn tiền. **Không tạo đơn thủ công.** |
-| **Manager** | Toàn quyền staff; cấu hình catalog/giá/chính sách; duyệt hoàn tiền; xem báo cáo, audit log và xử lý ngoại lệ reservation quá hạn. |
+| **Manager** | Toàn quyền staff; cấu hình catalog/giá/chính sách; duyệt hoàn tiền; xem báo cáo và audit log. |
 | **Khách** | Nhận link, nhập OTP/mã đồ và tự gửi form. Không vào dashboard. |
 
 Ngoài phạm vi MVP: thanh toán online tự động, đồng bộ hãng vận chuyển và website catalogue công khai.
@@ -34,7 +34,7 @@ Không có `INQUIRY_HOLD`. Khách mới hỏi đồ chưa tạo bản ghi khóa 
 
 `reservation` chỉ được tạo khi staff đã xác nhận khách **đã chuyển tiền**. Reservation giữ lịch/suất sản phẩm và có thể tồn tại lâu để khách xoay đủ tiền; không dùng expiry cố định 2 giờ.
 
-Với nhánh cọc 100.000đ, staff bắt buộc đặt `deposit_deadline_at` (hạn chốt cọc còn lại) phù hợp ngày thuê. Khi quá hạn, reservation chuyển `OVERDUE`, gửi cảnh báo nhưng **không tự nhả đồ**. Staff/manager quyết định gia hạn hoặc hủy theo chính sách shop. Nhánh cọc đích ngay không cần hạn chốt cọc còn lại; nếu khách chưa gửi form, staff chỉ nhắc hoặc cấp lại OTP.
+Reservation cọc giữ slot vẫn giữ lịch cho đến khi khách gửi form hoặc staff hủy thủ công. Nếu khách chưa gửi form, staff có thể nhắc hoặc cấp lại OTP.
 
 ### 2.3. Hai nhánh tiền cọc
 
@@ -46,7 +46,7 @@ Với nhánh cọc 100.000đ, staff bắt buộc đặt `deposit_deadline_at` (h
 - Giá trị 100.000đ luôn được cộng vào tổng cọc đã nhận sau khi reservation chuyển thành đơn.
 - Khách có thể cọc 100.000đ để giữ slot và chờ xoay tiền; không cần đến thử đồ và không có trạng thái fitting.
 - Nếu khách đổi sản phẩm/size, hệ thống snapshot lại giá trị váy và tính `cọc còn lại = cọc đích mới − tổng tiền đã nhận`.
-- Chính sách khi hủy hoặc quá hạn reservation (mất/hoàn/bảo lưu 100.000đ) chưa được chốt; hệ thống phải lưu lý do và quyết định staff/manager, không tự xóa giao dịch.
+- Chính sách khi hủy reservation (mất/hoàn/bảo lưu 100.000đ) chưa được chốt; hệ thống phải lưu lý do và quyết định staff/manager, không tự xóa giao dịch.
 
 ### 2.4. CCCD qua Instagram
 
@@ -103,12 +103,8 @@ flowchart TD
 stateDiagram-v2
     state "Reservation" as reservation {
       [*] --> ACTIVE: Staff xác nhận đã nhận tiền
-      ACTIVE --> OVERDUE: Qua deposit_deadline_at
-      OVERDUE --> ACTIVE: Staff/Manager gia hạn
       ACTIVE --> CONVERTED_TO_ORDER: Khách gửi form hợp lệ
-      OVERDUE --> CONVERTED_TO_ORDER: Staff vẫn chấp nhận form
       ACTIVE --> CANCELLED: Hủy theo chính sách
-      OVERDUE --> CANCELLED: Manager/Staff quyết định hủy
     }
 
     state "Order" as order {
@@ -149,13 +145,13 @@ flowchart LR
 
 | Khu vực | Màn hình | Nội dung chính |
 |---|---|---|
-| Dashboard | Hôm nay | Đơn cần cọc, reservation quá hạn/sắp đến hạn, lịch giao/nhận, tiền cần hoàn. |
+| Dashboard | Hôm nay | Đơn cần cọc, giữ chỗ đang hoạt động, lịch giao/nhận, tiền cần hoàn. |
 | Lịch tồn kho | Tra cứu availability | Tìm mẫu/mã, size, thời gian nhận/trả; trả về các mã trống. Đây là màn mặc định. |
 | Lịch tồn kho | Tổng quan kho | Nhóm theo mẫu + size: số mã trống / thuê / reservation / cleaning; chỉ mở timeline khi cần. |
-| Reservation | Báo giá & giữ slot | Chọn lịch, sản phẩm, loại tiền khách đã trả, hạn chốt cọc; ghi nhận chứng từ và cấp mã/OTP/link. Không tạo order. |
+| Reservation | Báo giá & giữ slot | Chọn lịch, sản phẩm, loại tiền khách đã trả; ghi nhận chứng từ và cấp mã/OTP/link. Không tạo order. |
 | Đơn hàng | Danh sách/chi tiết | Đơn do hệ thống tạo, timeline, payment ledger, checklist CCCD Instagram, giao/nhận, hư hại, hoàn tiền. |
 | Kho | Catalog & mã vật lý | Mẫu, variant-size, ảnh, giá trị thay thế, mã vật lý, cleaning/maintenance. |
-| Cấu hình | Chính sách | Bảng giá, tỷ lệ ngày thêm, số tiền reservation 100k, quy tắc quá hạn/hủy, cleaning time. |
+| Cấu hình | Chính sách | Bảng giá, tỷ lệ ngày thêm, số tiền reservation 100k và quy tắc hủy. |
 | Customer | Form OTP | Liên hệ, mã đồ, lịch, địa chỉ, gói cọc và ghi chú; không có upload CCCD. |
 
 ### Lịch tồn kho khi có hàng nghìn mã
@@ -165,7 +161,7 @@ Không render bảng timeline của toàn bộ mã đồ.
 1. **Search-first:** staff nhập mã/tên mẫu, size, ngày nhận-trả; backend trả mã/suất trống.
 2. **Aggregate-first:** nhóm theo mẫu + size, ví dụ `Afrodille gấm S: trống 12 | thuê 4 | reservation 1 | cleaning 2`.
 3. **Timeline on demand:** chỉ khi mở một nhóm/mã mới tải timeline chi tiết của nhóm đó.
-4. **Operations queue:** danh sách độc lập chỉ gồm giao, nhận, cleaning, reservation quá hạn của hôm nay/7 ngày tới.
+4. **Operations queue:** danh sách độc lập chỉ gồm giao, nhận và reservation đang hoạt động của hôm nay/7 ngày tới.
 5. Mobile dùng form tra cứu + kết quả dạng danh sách; không hiển thị ma trận toàn kho.
 
 ## 5. Contract customer form
@@ -221,7 +217,7 @@ Ví dụ: váy trị giá 1.200.000đ, thuê 3 ngày 320.000đ, khách đã cọ
 | Nhóm | Hành động chính |
 |---|---|
 | Availability | `GET /availability` theo variant/mã + khoảng thuê; trả mã/suất trống. |
-| Reservations | Tạo sau khi xác nhận tiền, thêm item, đặt/gia hạn deadline, hủy, cấp lại OTP; không tạo order. |
+| Reservations | Tạo sau khi xác nhận tiền, thêm item, hủy, cấp lại OTP; không tạo order. |
 | Customer OTP | Verify OTP và submit form idempotent; backend tự chuyển reservation thành order. |
 | Orders | List/filter/detail, transition state, assign mã vật lý, checklist CCCD Instagram. Không có endpoint tạo order cho staff. |
 | Payments | Ghi nhận chứng từ, xác nhận payment, tính cọc còn lại, hoàn tiền/thu thêm. |
@@ -234,7 +230,6 @@ Ví dụ: váy trị giá 1.200.000đ, thuê 3 ngày 320.000đ, khách đã cọ
 | Sự kiện | Người nhận | Hành động |
 |---|---|---|
 | Customer form tạo order | Staff phụ trách, Manager | Notification mở thẳng order mới. |
-| Reservation cọc 100k sắp tới hạn / quá hạn | Staff, Manager | Nhắc trước các mốc cấu hình; quá hạn chuyển `OVERDUE`, không auto-release. |
 | Gói 50% chưa checklist CCCD | Staff | Nhắc check Instagram trước khi confirm order. |
 | Đơn giao/nhận hôm nay, trễ hạn, hoàn tiền chờ duyệt | Staff/Manager | Dashboard và notification. |
 | Giá, tiền, lịch hoặc trạng thái thay đổi | Manager | Audit notification. |
@@ -256,15 +251,15 @@ Ví dụ: váy trị giá 1.200.000đ, thuê 3 ngày 320.000đ, khách đã cọ
 ### Staff — từng module
 
 1. **Lịch tồn kho:** search mẫu/size/khoảng thuê, chọn mã hoặc suất còn trống.
-2. **Reservation:** báo giá; xác nhận khách đã chuyển 100k hoặc cọc đích; nhập hạn chốt cọc; ghi chứng từ; khóa lịch/suất.
+2. **Reservation:** báo giá; xác nhận khách đã chuyển 100k hoặc cọc đích; ghi chứng từ; khóa lịch/suất.
 3. **Cấp mã & form:** gửi mã đồ, OTP và link. Staff không tạo order.
 4. **Đơn mới:** khi khách gửi form, kiểm tra timeline/cọc. Nhánh 100k: thu và xác nhận cọc còn lại. Nhánh 50%: tick đã check CCCD qua Instagram. Nhánh 100%: không cần checklist.
 5. **Giao/nhận:** cập nhật shipment, nhận trả, ảnh tình trạng/hư hại, gửi đề nghị hoàn.
 
 ### Manager — từng module
 
-1. Theo dõi reservation quá hạn, order mới, đơn trễ trả và các yêu cầu hoàn.
-2. Quản lý mã vật lý, giá, cleaning time, tỷ lệ ngày thêm và chính sách hủy/quá hạn reservation.
+1. Theo dõi reservation đang hoạt động, order mới, đơn trễ trả và các yêu cầu hoàn.
+2. Quản lý mã vật lý, giá, tỷ lệ ngày thêm và chính sách hủy reservation.
 3. Duyệt hoàn tiền, khoản thu thêm và các thay đổi ngoại lệ; xem audit/báo cáo.
 
 ### Khách — từng bước

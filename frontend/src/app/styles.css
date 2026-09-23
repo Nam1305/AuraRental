@@ -156,6 +156,15 @@ h1, h2 { color: var(--ink); }
 .login-card > p { color: var(--muted); line-height: 1.6; }
 .login-form { display: grid; gap: 14px; margin-top: 24px; }
 .inline-error { margin-top: 14px; border: 1px solid; border-radius: 12px; padding: 12px; font-size: 13px; }
+.public-rental-card { width: min(100%, 640px); }
+.public-rental-card .brand-mark { margin-bottom: 18px; }
+.public-rental-intro { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.public-rental-summary { margin: 2px 0 0; }
+.public-rental-location { display: grid; gap: 4px; border-radius: 12px; padding: 12px; background: #faf7f6; font-size: 13px; }
+.public-rental-location span, .public-rental-muted { color: var(--muted); line-height: 1.5; }
+.public-rental-deposit { margin: 0; }
+.public-rental-success { display: grid; gap: 14px; margin-top: 22px; }
+.public-rental-success > p { margin: 0; color: var(--muted); line-height: 1.55; }
 
 /* Operational modules: reservation, order and return. */
 .page-heading--actions { display: flex; flex-direction: column; gap: 14px; }

@@ -10,7 +10,6 @@ export type ReservationListItem = {
   rentalEndAt: string
   depositConfirmed: number
   depositRemaining: number
-  depositDeadlineAt: string | null
   formStatus: string
 }
 
@@ -27,7 +26,6 @@ export type ReservationDetail = {
     required: number
     confirmedReceived: number
     remaining: number
-    deadlineAt: string | null
   }
   items: Array<{
     inventoryItemId: string
@@ -67,7 +65,6 @@ export type CreateReservationInput = {
   rentalStartAt: string
   rentalEndAt: string
   depositPlan: string
-  depositDeadlineAt: string | null
   items: RentalSelection[]
   receivedPayment: {
     type: string

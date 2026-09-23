@@ -32,7 +32,7 @@ src/
 Các màn đăng nhập email/username + password, shell/branch switcher, availability, catalog, customer list/history, giữ chỗ, đơn hàng và trả đồ đã gọi API thật.
 
 - Kho sản phẩm: staff và manager được tạo mẫu, thêm size, sửa giá `1D/2D/3D`, thêm mã vật lý và cập nhật trạng thái kho trong chi nhánh đang đăng nhập. Chỉ manager được sửa metadata dùng chung hoặc archive/khôi phục mẫu.
-- Giữ chỗ: tìm khách, kiểm tra mã đồ trống, chọn gói thuê, xem báo giá, ghi nhận cọc, cấp lại OTP, gia hạn và hủy.
+- Giữ chỗ: tìm khách, kiểm tra mã đồ trống, chọn gói thuê, xem báo giá, ghi nhận cọc, cấp lại OTP và hủy.
 - Đơn hàng: theo dõi timeline, xác minh CCCD, bổ sung cọc, chuẩn bị đồ, giao/nhận và hủy theo trạng thái được backend cho phép.
 - Trả đồ: kiểm tra từng món, lập/gửi/duyệt phiếu hoàn, ghi nhận thu thêm và hoàn tất đối soát. Các bước duyệt/settle chỉ hiện với manager.
 

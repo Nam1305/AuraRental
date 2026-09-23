@@ -13,7 +13,6 @@ public sealed class Reservation
     public DateTimeOffset RentalEndAt { get; set; }
     public string DepositPlan { get; set; } = null!;
     public decimal DepositRequired { get; set; }
-    public DateTimeOffset? DepositDeadlineAt { get; set; }
     public string? OtpHash { get; set; }
     public string? FormTokenHash { get; set; }
     public DateTimeOffset? OtpExpiresAt { get; set; }

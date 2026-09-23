@@ -15,7 +15,6 @@ public sealed record CreateReservationRequest(
     DateTimeOffset RentalStartAt,
     DateTimeOffset RentalEndAt,
     string DepositPlan,
-    DateTimeOffset? DepositDeadlineAt,
     IReadOnlyList<ReservationItemRequest> Items,
     ReceivedPaymentRequest ReceivedPayment);
 
@@ -26,8 +25,7 @@ public sealed record ReservationDepositDto(
     string Plan,
     decimal Required,
     decimal ConfirmedReceived,
-    decimal Remaining,
-    DateTimeOffset? DeadlineAt);
+    decimal Remaining);
 
 public sealed record ReservationItemDto(
     Guid InventoryItemId,
@@ -65,12 +63,10 @@ public sealed record ReservationListItemDto(
     DateTimeOffset RentalEndAt,
     decimal DepositConfirmed,
     decimal DepositRemaining,
-    DateTimeOffset? DepositDeadlineAt,
     string FormStatus);
 
 public sealed record ReissueOtpRequest(string Reason);
 public sealed record ReissueOtpDto(string FormUrl, string Otp, DateTimeOffset ExpiresAt);
-public sealed record ExtendReservationDeadlineRequest(DateTimeOffset DepositDeadlineAt, string Reason);
 public sealed record CancelReservationRequest(string Reason, string PaymentDecision);
 public sealed record CancelReservationDto(Guid ReservationId, string Status, bool RequiresPaymentResolution);
 

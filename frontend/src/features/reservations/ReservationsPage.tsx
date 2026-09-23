@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { AsyncState } from '@/shared/components/AsyncState'
 import { useApiQuery } from '@/shared/hooks/use-api-query'
 import { formatMoney } from '@/shared/format/money'
@@ -12,7 +12,6 @@ import {
   cancelReservation,
   createQuote,
   createReservation,
-  extendDeadline,
   getReservation,
   recordReservationPayment,
   reissueOtp,
@@ -26,7 +25,7 @@ const dayAfter = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)
 
 export function ReservationsPage() {
   const { activeBranchId } = useSession()
-  const [status, setStatus] = useState('ACTIVE,OVERDUE')
+  const [status, setStatus] = useState('ACTIVE')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -63,9 +62,7 @@ export function ReservationsPage() {
         <label className="field">
           <span>Trạng thái</span>
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="ACTIVE,OVERDUE">Đang giữ + quá hạn</option>
             <option value="ACTIVE">Đang giữ</option>
-            <option value="OVERDUE">Quá hạn</option>
             <option value="CONVERTED_TO_ORDER">Đã lên đơn</option>
             <option value="CANCELLED">Đã hủy</option>
             <option value="">Tất cả</option>
@@ -129,7 +126,6 @@ function CreateReservationPanel({ branchId, onCreated }: { branchId: string; onC
   const [selected, setSelected] = useState<SelectedAsset[]>([])
   const [depositPlan, setDepositPlan] = useState('FULL')
   const [paymentType, setPaymentType] = useState<'SLOT_DEPOSIT' | 'TARGET_DEPOSIT'>('SLOT_DEPOSIT')
-  const [deadline, setDeadline] = useState(toLocalDateTimeInput(new Date(Date.now() + 4 * 60 * 60 * 1000)))
   const [method, setMethod] = useState('BANK_TRANSFER')
   const [transactionRef, setTransactionRef] = useState('')
   const [quote, setQuote] = useState<Quote | null>(null)
@@ -183,7 +179,6 @@ function CreateReservationPanel({ branchId, onCreated }: { branchId: string; onC
     try {
       setCreated(await createReservation(branchId, {
         ...quoteInput,
-        depositDeadlineAt: paymentType === 'SLOT_DEPOSIT' ? deadline : null,
         receivedPayment: {
           type: paymentType,
           amount: paymentType === 'SLOT_DEPOSIT' ? quote.slotDepositAmount : quote.depositRequired,
@@ -227,7 +222,6 @@ function CreateReservationPanel({ branchId, onCreated }: { branchId: string; onC
       <div className="form-grid">
         <label className="field"><span>Gói cọc</span><select value={depositPlan} onChange={(event) => { setDepositPlan(event.target.value); setQuote(null) }}><option value="FULL">Cọc 100%</option><option value="FIFTY_WITH_ID">Cọc 50% + CCCD</option></select></label>
         <label className="field"><span>Đã nhận</span><select value={paymentType} onChange={(event) => setPaymentType(event.target.value as typeof paymentType)}><option value="SLOT_DEPOSIT">Cọc giữ chỗ 100.000đ</option><option value="TARGET_DEPOSIT">Nhận đủ cọc đích</option></select></label>
-        {paymentType === 'SLOT_DEPOSIT' && <label className="field"><span>Hạn chốt đủ cọc</span><input type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} required /></label>}
         <label className="field"><span>Phương thức</span><select value={method} onChange={(event) => setMethod(event.target.value)}><option value="BANK_TRANSFER">Chuyển khoản</option><option value="CASH">Tiền mặt</option></select></label>
         <label className="field"><span>Mã giao dịch</span><input value={transactionRef} onChange={(event) => setTransactionRef(event.target.value)} placeholder="Tùy chọn" /></label>
       </div>
@@ -242,6 +236,12 @@ function ReservationDetail({ branchId, reservationId, onChanged }: { branchId: s
   const [version, setVersion] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    setMessage(null)
+    setActionError(null)
+  }, [reservationId])
+
   const detail = useApiQuery(() => getReservation(branchId, reservationId), [branchId, reservationId, version])
   const run = async (action: () => Promise<unknown>, success: string) => {
     setActionError(null)
@@ -264,13 +264,12 @@ function ReservationDetail({ branchId, reservationId, onChanged }: { branchId: s
       {reservation && <aside className="panel detail-panel">
         <div className="operation-card__top"><strong>{reservation.reservationNo}</strong><span className="status-pill">{statusLabel(reservation.status)}</span></div>
         <h2>{reservation.customer.name}</h2><p>{reservation.customer.phone} · {reservation.branch.name}</p>
-        <dl className="detail-grid"><div><dt>Lịch thuê</dt><dd>{formatDateTime(reservation.rentalStartAt)}<br />→ {formatDateTime(reservation.rentalEndAt)}</dd></div><div><dt>Đã nhận cọc</dt><dd>{formatMoney(reservation.deposit.confirmedReceived)}</dd></div><div><dt>Còn lại</dt><dd>{formatMoney(reservation.deposit.remaining)}</dd></div><div><dt>Hạn cọc</dt><dd>{formatDateTime(reservation.deposit.deadlineAt)}</dd></div></dl>
+        <dl className="detail-grid"><div><dt>Lịch thuê</dt><dd>{formatDateTime(reservation.rentalStartAt)}<br />→ {formatDateTime(reservation.rentalEndAt)}</dd></div><div><dt>Đã nhận cọc</dt><dd>{formatMoney(reservation.deposit.confirmedReceived)}</dd></div><div><dt>Còn lại</dt><dd>{formatMoney(reservation.deposit.remaining)}</dd></div></dl>
         <div className="line-items">{reservation.items.map((item) => <div key={item.inventoryItemId}><span>{item.productName} · {item.size}<small>{item.assetCode} · {item.packageCode}</small></span><strong>{formatMoney(item.rentalPrice)}</strong></div>)}</div>
         {message && <div className="success-note">{message}</div>}{actionError && <div className="inline-error">{actionError.message}</div>}
-        {(reservation.status === 'ACTIVE' || reservation.status === 'OVERDUE') && reservation.formStatus === 'NOT_SUBMITTED' && <div className="action-buttons">
+        {reservation.status === 'ACTIVE' && reservation.formStatus === 'NOT_SUBMITTED' && <div className="action-buttons">
           {reservation.deposit.remaining > 0 && <button className="button button--primary" onClick={() => { const value = Number(window.prompt('Số tiền cọc vừa nhận', String(reservation.deposit.remaining))); if (value > 0) void run(() => recordReservationPayment(branchId, reservation.id, 'TARGET_DEPOSIT', value), 'Đã ghi nhận cọc.') }}>Ghi nhận cọc</button>}
           <button className="button" onClick={() => { const reason = window.prompt('Lý do cấp lại link/OTP'); if (reason) void reissueCredential(reason) }}>Cấp lại OTP</button>
-          <button className="button" onClick={() => { const date = window.prompt('Hạn cọc mới (YYYY-MM-DDTHH:mm)', toLocalDateTimeInput(new Date(Date.now() + 4 * 60 * 60 * 1000))); const reason = date && window.prompt('Lý do gia hạn'); if (date && reason) void run(() => extendDeadline(branchId, reservation.id, date, reason), 'Đã gia hạn cọc.') }}>Gia hạn</button>
           <button className="button button--danger" onClick={() => { const reason = window.prompt('Lý do hủy reservation'); if (reason && window.confirm('Xác nhận hủy giữ chỗ?')) void run(() => cancelReservation(branchId, reservation.id, reason), 'Đã hủy giữ chỗ.') }}>Hủy</button>
         </div>}
       </aside>}

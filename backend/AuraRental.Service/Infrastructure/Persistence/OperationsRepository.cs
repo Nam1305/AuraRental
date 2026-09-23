@@ -15,7 +15,6 @@ public sealed class OperationsRepository(AuraRentalDbContext context) : IOperati
         Guid branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
-        DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
         var pendingDeposit = await context.Orders.CountAsync(
@@ -23,12 +22,7 @@ public sealed class OperationsRepository(AuraRentalDbContext context) : IOperati
             cancellationToken);
         var activeReservations = await context.Reservations.CountAsync(
             reservation => reservation.BranchId == branchId &&
-                           reservation.Status == ReservationStatus.Active &&
-                           !(reservation.DepositDeadlineAt < nowUtc &&
-                             reservation.DepositRequired > reservation.Payments
-                                 .Where(payment => payment.Status == PaymentStatus.Confirmed &&
-                                                   (payment.Type == PaymentType.SlotDeposit || payment.Type == PaymentType.TargetDeposit))
-                                 .Sum(payment => payment.Amount)),
+                           reservation.Status == ReservationStatus.Active,
             cancellationToken);
         var returnsDue = await context.Orders.CountAsync(order =>
             order.BranchId == branchId &&
@@ -39,16 +33,7 @@ public sealed class OperationsRepository(AuraRentalDbContext context) : IOperati
         var waitingApproval = await context.Refunds.CountAsync(
             refund => refund.Order.BranchId == branchId && refund.Status == RefundStatus.Submitted,
             cancellationToken);
-        var overdue = await context.Reservations.CountAsync(reservation =>
-            reservation.BranchId == branchId &&
-            reservation.Status == ReservationStatus.Active &&
-            reservation.DepositDeadlineAt < nowUtc &&
-            reservation.DepositRequired > reservation.Payments
-                .Where(payment => payment.Status == PaymentStatus.Confirmed &&
-                                  (payment.Type == PaymentType.SlotDeposit || payment.Type == PaymentType.TargetDeposit))
-                .Sum(payment => payment.Amount),
-            cancellationToken);
-        return new DashboardCounts(pendingDeposit, activeReservations, returnsDue, waitingApproval, overdue);
+        return new DashboardCounts(pendingDeposit, activeReservations, returnsDue, waitingApproval);
     }
 
     public async Task<IReadOnlyList<DashboardTaskDto>> GetDashboardTasks(

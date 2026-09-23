@@ -50,8 +50,7 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
             item.Variant.Product.IsActive &&
             !item.ReservationItems.Any(reservationItem =>
                 reservationItem.ReservationId != ignoredReservationId &&
-                (reservationItem.Reservation.Status == ReservationStatus.Active ||
-                 reservationItem.Reservation.Status == ReservationStatus.Overdue) &&
+                reservationItem.Reservation.Status == ReservationStatus.Active &&
                 reservationItem.Reservation.RentalStartAt < endAt &&
                 reservationItem.Reservation.RentalEndAt > startAt) &&
             !item.OrderItems.Any(orderItem =>
@@ -95,7 +94,6 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
     public async Task<IReadOnlyList<Reservation>> SearchReservations(
         Guid branchId,
         IReadOnlyCollection<ReservationStatus> statuses,
-        DateTimeOffset? deadlineTo,
         string? query,
         int limit,
         CancellationToken cancellationToken)
@@ -103,34 +101,7 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
         var reservations = ReservationGraph(false).Where(reservation => reservation.BranchId == branchId);
         if (statuses.Count > 0)
         {
-            var now = DateTimeOffset.UtcNow;
-            var includeActive = statuses.Contains(ReservationStatus.Active);
-            var includeOverdue = statuses.Contains(ReservationStatus.Overdue);
-            var remainingStatuses = statuses
-                .Where(status => status is not (ReservationStatus.Active or ReservationStatus.Overdue))
-                .ToArray();
-            reservations = reservations.Where(reservation =>
-                remainingStatuses.Contains(reservation.Status) ||
-                (includeActive &&
-                 reservation.Status == ReservationStatus.Active &&
-                 !(reservation.DepositDeadlineAt < now &&
-                   reservation.DepositRequired > reservation.Payments
-                       .Where(payment => payment.Status == PaymentStatus.Confirmed &&
-                                         (payment.Type == PaymentType.SlotDeposit || payment.Type == PaymentType.TargetDeposit))
-                       .Sum(payment => payment.Amount))) ||
-                (includeOverdue &&
-                 (reservation.Status == ReservationStatus.Overdue ||
-                  (reservation.Status == ReservationStatus.Active &&
-                   reservation.DepositDeadlineAt < now &&
-                   reservation.DepositRequired > reservation.Payments
-                       .Where(payment => payment.Status == PaymentStatus.Confirmed &&
-                                         (payment.Type == PaymentType.SlotDeposit || payment.Type == PaymentType.TargetDeposit))
-                       .Sum(payment => payment.Amount)))));
-        }
-
-        if (deadlineTo.HasValue)
-        {
-            reservations = reservations.Where(reservation => reservation.DepositDeadlineAt <= deadlineTo);
+            reservations = reservations.Where(reservation => statuses.Contains(reservation.Status));
         }
 
         if (!string.IsNullOrWhiteSpace(query))

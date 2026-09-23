@@ -125,7 +125,7 @@ public sealed class AvailabilityUseCase(
         var reservationConflict = item.ReservationItems
             .Select(reservationItem => reservationItem.Reservation)
             .Where(reservation =>
-                (reservation.Status == ReservationStatus.Active || reservation.Status == ReservationStatus.Overdue) &&
+                reservation.Status == ReservationStatus.Active &&
                 reservation.RentalStartAt < endAt &&
                 reservation.RentalEndAt > startAt)
             .OrderBy(reservation => reservation.RentalStartAt)

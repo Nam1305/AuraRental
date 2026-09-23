@@ -32,7 +32,6 @@ public interface IRentalRepository
     Task<IReadOnlyList<Reservation>> SearchReservations(
         Guid branchId,
         IReadOnlyCollection<ReservationStatus> statuses,
-        DateTimeOffset? deadlineTo,
         string? query,
         int limit,
         CancellationToken cancellationToken);

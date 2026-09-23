@@ -63,3 +63,25 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const payload = (await response.json()) as ApiResponse<T>
   return payload.data
 }
+
+/** Calls an anonymous endpoint without a staff session or active-branch context. */
+export async function publicApiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'application/json')
+  if (options.body) headers.set('Content-Type', 'application/json')
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as ApiErrorResponse | null
+    throw new ApiError(
+      payload?.error.code ?? 'HTTP_ERROR',
+      payload?.error.message ?? 'Không thể kết nối đến máy chủ.',
+      response.status,
+      payload?.error.requestId,
+      payload?.error.fields,
+    )
+  }
+
+  const payload = (await response.json()) as ApiResponse<T>
+  return payload.data
+}

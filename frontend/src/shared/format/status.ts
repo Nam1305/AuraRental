@@ -1,6 +1,5 @@
 const labels: Record<string, string> = {
   ACTIVE: 'Đang giữ chỗ',
-  OVERDUE: 'Quá hạn cọc',
   CONVERTED_TO_ORDER: 'Đã lên đơn',
   CANCELLED: 'Đã hủy',
   PENDING_DEPOSIT: 'Chờ đủ cọc',

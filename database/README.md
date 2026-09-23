@@ -10,7 +10,7 @@ docker exec -i postgres-db-1 psql -v ON_ERROR_STOP=1 -U postgres -d aura_rental 
 
 `seed.sql` dùng UUID cố định và UPSERT nên có thể chạy lại mà không nhân bản dữ liệu. File không xóa dữ liệu được tạo thủ công. Bộ seed gồm hai chi nhánh, ba tài khoản, catalog và giá `1D/2D/3D` theo từng chi nhánh, cùng reservation/order/refund ở nhiều trạng thái.
 
-Bộ dữ liệu hiện có 16 mã đồ vật lý, 11 lượt giữ chỗ, 8 đơn hàng và 2 phiếu hoàn. Các case Hà Nội bao phủ giữ chỗ còn hạn/quá hạn, đơn thiếu cọc, chờ xác minh CCCD, đã xác nhận, đang chuẩn bị, đang thuê và đang kiểm đồ; trong hàng đợi trả có cả đơn chưa inspection và đơn đã gửi manager duyệt. Sài Gòn có giữ chỗ đang hoạt động và đơn đã hoàn tất để kiểm tra phân quyền/dữ liệu theo chi nhánh.
+Bộ dữ liệu hiện có 16 mã đồ vật lý, 11 lượt giữ chỗ, 8 đơn hàng và 2 phiếu hoàn. Các case Hà Nội bao phủ giữ chỗ cọc slot, đơn thiếu cọc, chờ xác minh CCCD, đã xác nhận, đang chuẩn bị, đang thuê và đang kiểm đồ; trong hàng đợi trả có cả đơn chưa inspection và đơn đã gửi manager duyệt. Sài Gòn có giữ chỗ đang hoạt động và đơn đã hoàn tất để kiểm tra phân quyền/dữ liệu theo chi nhánh.
 
 | Vai trò | Username | Email | Password development |
 |---|---|---|---|
@@ -89,11 +89,10 @@ Chỉ dùng một dòng `id = 1`: cọc giữ slot mặc định 100k và tỷ l
 | Thuộc tính | Ý nghĩa |
 |---|---|
 | `id`, `reservation_no`, `customer_id` | ID, mã giữ lịch và khách thuê. |
-| `status` | `ACTIVE`, `OVERDUE`, `CONVERTED_TO_ORDER`, `CANCELLED`. |
+| `status` | `ACTIVE`, `CONVERTED_TO_ORDER`, `CANCELLED`. |
 | `rental_start_at`, `rental_end_at` | Khoảng thuê chung của các món trong lượt này. |
 | `deposit_entry` | Nhận cọc giữ slot `SLOT` hay cọc đích `TARGET`. |
 | `deposit_plan`, `deposit_required` | Gói cuối `FIFTY_WITH_ID`/`FULL` và cọc đích đã chốt. |
-| `deposit_deadline_at` | Hạn chốt đủ cọc, bắt buộc với nhánh SLOT. Quá hạn không tự nhả đồ. |
 | `otp_hash`, `form_token_hash` | Hash OTP và token link; không lưu token/OTP thô. |
 | `otp_expires_at`, `otp_used_at` | Hạn dùng và lúc đã dùng form. Cấp lại thay token cũ, không hủy reservation. |
 | `cancellation_reason` | Lý do hủy. |
@@ -209,7 +208,7 @@ Hoàn 0đ: không tạo payment 0đ; manager xác nhận đối soát và set se
 
 - Kiểm tra role, trạng thái và dữ liệu bắt buộc; manager không phải chờ staff.
 - Tính cọc/thuê/phí và snapshot, bảo đảm tổng item bằng tổng phiếu duyệt.
-- Chống double booking: transaction lock các inventory item theo thứ tự cố định, kiểm tra reservation ACTIVE/OVERDUE và order chưa COMPLETED/CANCELLED giao khoảng thuê; kiểm tra trạng thái `MAINTENANCE`. Mọi đường tạo/đổi lịch, bảo trì, nhận trả và settled phải dùng cùng quy tắc khóa.
+- Chống double booking: transaction lock các inventory item theo thứ tự cố định, kiểm tra reservation ACTIVE và order chưa COMPLETED/CANCELLED giao khoảng thuê; kiểm tra trạng thái `MAINTENANCE`. Mọi đường tạo/đổi lịch, bảo trì, nhận trả và settled phải dùng cùng quy tắc khóa.
 - Trả trễ gặp đơn sau: báo xung đột để manager xử lý, không âm thầm coi là trống.
 - Serialize duyệt/điều chỉnh/chi bằng lock order; chống bấm lặp, một bản duyệt hiện hành và một lần chi confirmed. PK/FK/unique đơn giản không thay thế những transaction này.
 - Next.js gọi .NET; không cấp frontend quyền ghi trực tiếp bảng nghiệp vụ. Ảnh hư hại/chứng từ private, chỉ lưu object path, không signed URL hết hạn. PNG được tạo từ snapshot, không timeline/CCCD/chứng từ trong payload khách.

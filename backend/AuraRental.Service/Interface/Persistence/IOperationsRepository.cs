@@ -3,7 +3,7 @@ using AuraRental.Service.DTOs.Operations;
 
 namespace AuraRental.Service.Interface.Persistence;
 
-public sealed record DashboardCounts(int PendingDeposit, int ActiveReservations, int ReturnsDue, int RefundsWaitingApproval, int OverdueReservations);
+public sealed record DashboardCounts(int PendingDeposit, int ActiveReservations, int ReturnsDue, int RefundsWaitingApproval);
 
 public interface IOperationsRepository
 {
@@ -12,7 +12,6 @@ public interface IOperationsRepository
         Guid branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
-        DateTimeOffset nowUtc,
         CancellationToken cancellationToken);
     Task<IReadOnlyList<DashboardTaskDto>> GetDashboardTasks(
         Guid branchId,

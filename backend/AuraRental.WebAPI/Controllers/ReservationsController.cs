@@ -25,11 +25,10 @@ public sealed class ReservationsController(IReservationUseCase reservationUseCas
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<ReservationListItemDto>>>> Search(
         [FromQuery] string? status,
-        [FromQuery] DateTimeOffset? deadlineTo,
         [FromQuery] string? query,
         [FromQuery] int limit = 20,
         CancellationToken cancellationToken = default) =>
-        ResponseData(await reservationUseCase.Search(status, deadlineTo, query, limit, cancellationToken));
+        ResponseData(await reservationUseCase.Search(status, query, limit, cancellationToken));
 
     [HttpGet("{reservationId:guid}")]
     public async Task<ActionResult<ApiResponse<ReservationDto>>> Get(
@@ -52,14 +51,6 @@ public sealed class ReservationsController(IReservationUseCase reservationUseCas
         [FromBody] UpdateRentalSelectionRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.UpdateRentalSelection(reservationId, request, cancellationToken));
-
-    [HttpPost("{reservationId:guid}/extend-deadline")]
-    [Idempotent]
-    public async Task<ActionResult<ApiResponse<ReservationDto>>> ExtendDeadline(
-        Guid reservationId,
-        [FromBody] ExtendReservationDeadlineRequest request,
-        CancellationToken cancellationToken) =>
-        ResponseData(await reservationUseCase.ExtendDeadline(reservationId, request, cancellationToken));
 
     [HttpPost("{reservationId:guid}/cancel")]
     [Idempotent]
