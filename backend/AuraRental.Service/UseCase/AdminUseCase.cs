@@ -38,7 +38,6 @@ public sealed class AdminUseCase(
 
         var branch = new Branch
         {
-            Id = Guid.NewGuid(),
             Code = code,
             Name = request.Name.Trim(),
             Address = request.Address.Trim()
@@ -49,7 +48,7 @@ public sealed class AdminUseCase(
     }
 
     public async Task<BranchSummaryDto> UpdateBranch(
-        Guid branchId,
+        int branchId,
         UpdateBranchRequest request,
         CancellationToken cancellationToken)
     {
@@ -82,7 +81,7 @@ public sealed class AdminUseCase(
     }
 
     public async Task<UserListItemDto> ReplaceUserBranches(
-        Guid userId,
+        int userId,
         ReplaceUserBranchesRequest request,
         CancellationToken cancellationToken)
     {

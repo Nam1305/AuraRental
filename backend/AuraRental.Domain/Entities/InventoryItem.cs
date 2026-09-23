@@ -4,9 +4,9 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class InventoryItem
 {
-    public Guid Id { get; set; }
-    public Guid VariantId { get; set; }
-    public Guid BranchId { get; set; }
+    public int Id { get; set; }
+    public int VariantId { get; set; }
+    public int BranchId { get; set; }
     public string AssetCode { get; set; } = null!;
     public InventoryStatus Status { get; set; } = InventoryStatus.Usable;
     public ProductVariant Variant { get; set; } = null!;

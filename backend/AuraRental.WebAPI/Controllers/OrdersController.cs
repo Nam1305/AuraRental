@@ -23,80 +23,80 @@ public sealed class OrdersController(IOrderUseCase orderUseCase, IReturnUseCase 
         CancellationToken cancellationToken = default) =>
         ResponseData(await orderUseCase.Search(status, query, from, to, limit, cancellationToken));
 
-    [HttpGet("{orderId:guid}")]
+    [HttpGet("{orderId:int}")]
     public async Task<ActionResult<ApiResponse<OrderDetailDto>>> Get(
-        Guid orderId,
+        int orderId,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.Get(orderId, cancellationToken));
 
-    [HttpPost("{orderId:guid}/identity-verification")]
+    [HttpPost("{orderId:int}/identity-verification")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<VerifyIdentityDto>>> VerifyIdentity(
-        Guid orderId,
+        int orderId,
         [FromBody] VerifyIdentityRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.VerifyIdentity(orderId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/cancel")]
+    [HttpPost("{orderId:int}/cancel")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<CancelOrderDto>>> Cancel(
-        Guid orderId,
+        int orderId,
         [FromBody] CancelOrderRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.Cancel(orderId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/prepare")]
+    [HttpPost("{orderId:int}/prepare")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<OrderTransitionDto>>> Prepare(
-        Guid orderId,
+        int orderId,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.Prepare(orderId, cancellationToken));
 
-    [HttpPost("{orderId:guid}/delivery/start")]
+    [HttpPost("{orderId:int}/delivery/start")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<OrderTransitionDto>>> StartDelivery(
-        Guid orderId,
+        int orderId,
         [FromBody] StartDeliveryRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.StartDelivery(orderId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/delivery/complete")]
+    [HttpPost("{orderId:int}/delivery/complete")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<OrderTransitionDto>>> CompleteDelivery(
-        Guid orderId,
+        int orderId,
         [FromBody] CompleteDeliveryRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.CompleteDelivery(orderId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/return-delivery/start")]
+    [HttpPost("{orderId:int}/return-delivery/start")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<OrderTransitionDto>>> StartReturnDelivery(
-        Guid orderId,
+        int orderId,
         [FromBody] StartDeliveryRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.StartReturnDelivery(orderId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/return-delivery/complete")]
+    [HttpPost("{orderId:int}/return-delivery/complete")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<OrderTransitionDto>>> CompleteReturnDelivery(
-        Guid orderId,
+        int orderId,
         [FromBody] CompleteReturnDeliveryRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.CompleteReturnDelivery(orderId, request, cancellationToken));
 
-    [HttpPut("{orderId:guid}/items/{orderItemId:guid}/inspection")]
+    [HttpPut("{orderId:int}/items/{orderItemId:int}/inspection")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<InspectionDto>>> InspectItem(
-        Guid orderId,
-        Guid orderItemId,
+        int orderId,
+        int orderItemId,
         [FromBody] InspectOrderItemRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await returnUseCase.InspectItem(orderId, orderItemId, request, cancellationToken));
 
-    [HttpPost("{orderId:guid}/refunds")]
+    [HttpPost("{orderId:int}/refunds")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<RefundDto>>> CreateRefund(
-        Guid orderId,
+        int orderId,
         [FromBody] CreateRefundRequest request,
         CancellationToken cancellationToken)
     {

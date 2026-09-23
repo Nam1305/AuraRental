@@ -4,11 +4,11 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class Order
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public string OrderNo { get; set; } = null!;
-    public Guid CustomerId { get; set; }
-    public Guid ReservationId { get; set; }
-    public Guid BranchId { get; set; }
+    public int CustomerId { get; set; }
+    public int ReservationId { get; set; }
+    public int BranchId { get; set; }
     public OrderStatus Status { get; set; }
     public string CustomerName { get; set; } = null!;
     public string CustomerPhone { get; set; } = null!;
@@ -17,11 +17,11 @@ public sealed class Order
     public string ReturnDeliveryStatus { get; set; } = "NOT_STARTED";
     public string? DeliveryTrackingCode { get; set; }
     public string? ReturnTrackingCode { get; set; }
-    public Guid? IdentityVerifiedBy { get; set; }
+    public int? IdentityVerifiedBy { get; set; }
     public DateTimeOffset? IdentityVerifiedAt { get; set; }
     public DateTimeOffset? DeliveredAt { get; set; }
     public DateTimeOffset? ReturnedAt { get; set; }
-    public Guid? SettledBy { get; set; }
+    public int? SettledBy { get; set; }
     public DateTimeOffset? SettledAt { get; set; }
     public string? CancellationReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

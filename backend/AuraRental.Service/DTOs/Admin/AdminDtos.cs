@@ -4,7 +4,7 @@ public sealed record CreateBranchRequest(string Code, string Name, string Addres
 public sealed record UpdateBranchRequest(string Name, string Address, bool IsActive);
 
 public sealed record UserListItemDto(
-    Guid Id,
+    int Id,
     string Name,
     string Username,
     string Email,
@@ -12,8 +12,8 @@ public sealed record UserListItemDto(
     bool IsActive,
     IReadOnlyList<UserBranchDto> Branches);
 
-public sealed record UserBranchDto(Guid Id, string Code, string Name);
-public sealed record ReplaceUserBranchesRequest(IReadOnlyList<Guid> BranchIds);
+public sealed record UserBranchDto(int Id, string Code, string Name);
+public sealed record ReplaceUserBranchesRequest(IReadOnlyList<int> BranchIds);
 
 public sealed record SettingsDto(
     decimal SlotDepositAmount,

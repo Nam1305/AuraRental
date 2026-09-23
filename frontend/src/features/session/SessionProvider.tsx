@@ -11,25 +11,26 @@ import { login as requestLogin } from '@/features/auth/auth.api'
 
 type SessionValue = {
   user: CurrentUser | null
-  activeBranchId: string | null
+  activeBranchId: number | null
   loading: boolean
   error: Error | null
   login: (identifier: string, password: string) => Promise<void>
   logout: () => void
-  selectBranch: (branchId: string) => void
+  selectBranch: (branchId: number) => void
 }
 
 const SessionContext = createContext<SessionValue | null>(null)
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null)
-  const [activeBranchId, setActiveBranchId] = useState<string | null>(null)
+  const [activeBranchId, setActiveBranchId] = useState<number | null>(null)
   const [loading, setLoading] = useState(Boolean(getAccessToken()))
   const [error, setError] = useState<Error | null>(null)
 
   const applyCurrentUser = async () => {
     const nextUser = await getCurrentUser()
-    const stored = getStoredBranchId()
+    const storedValue = getStoredBranchId()
+    const stored = storedValue && /^\d+$/.test(storedValue) ? Number(storedValue) : null
     const allowedStoredBranch = nextUser.branches.some((branch) => branch.id === stored)
     const nextBranch = allowedStoredBranch
       ? stored

@@ -13,15 +13,15 @@ namespace AuraRental.WebAPI.Controllers;
 [Idempotent]
 public sealed class PaymentsController(IOrderUseCase orderUseCase) : ApiControllerBase
 {
-    [HttpPost("{paymentId:guid}/confirm")]
+    [HttpPost("{paymentId:int}/confirm")]
     public async Task<ActionResult<ApiResponse<PaymentActionDto>>> Confirm(
-        Guid paymentId,
+        int paymentId,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.ConfirmPayment(paymentId, cancellationToken));
 
-    [HttpPost("{paymentId:guid}/void")]
+    [HttpPost("{paymentId:int}/void")]
     public async Task<ActionResult<ApiResponse<PaymentActionDto>>> Void(
-        Guid paymentId,
+        int paymentId,
         [FromBody] PaymentActionRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await orderUseCase.VoidPayment(paymentId, request, cancellationToken));

@@ -1,5 +1,5 @@
 export type CustomerListItem = {
-  id: string
+  id: number
   name: string
   phone: string
   instagramHandle: string | null
@@ -9,7 +9,7 @@ export type CustomerListItem = {
 }
 
 export type Customer = {
-  id: string
+  id: number
   name: string
   phone: string
   instagramHandle: string | null
@@ -17,7 +17,7 @@ export type Customer = {
 }
 
 export type CustomerOrderHistory = {
-  orderId: string
+  orderId: number
   orderNo: string
   branchCode: string
   branchName: string

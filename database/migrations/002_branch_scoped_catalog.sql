@@ -4,7 +4,7 @@
 BEGIN;
 SET LOCAL search_path = aura;
 
-ALTER TABLE products ADD COLUMN branch_id uuid REFERENCES branches (id);
+ALTER TABLE products ADD COLUMN branch_id integer REFERENCES branches (id);
 ALTER TABLE products DROP CONSTRAINT products_code_key;
 
 CREATE TEMP TABLE product_branch_map ON COMMIT DROP AS
@@ -37,7 +37,7 @@ WITH product_branches AS (
 SELECT product_id AS source_product_id,
        branch_id,
        branch_rank = 1 AS keeps_source_product,
-       CASE WHEN branch_rank = 1 THEN product_id ELSE gen_random_uuid() END AS target_product_id
+       CASE WHEN branch_rank = 1 THEN product_id ELSE nextval(pg_get_serial_sequence('aura.products', 'id')) END AS target_product_id
 FROM ranked;
 
 UPDATE products product
@@ -56,7 +56,7 @@ WHERE NOT map.keeps_source_product;
 CREATE TEMP TABLE variant_branch_map ON COMMIT DROP AS
 SELECT variant.id AS source_variant_id,
        map.branch_id,
-       CASE WHEN map.keeps_source_product THEN variant.id ELSE gen_random_uuid() END AS target_variant_id,
+       CASE WHEN map.keeps_source_product THEN variant.id ELSE nextval(pg_get_serial_sequence('aura.product_variants', 'id')) END AS target_variant_id,
        map.target_product_id,
        map.keeps_source_product
 FROM product_variants variant

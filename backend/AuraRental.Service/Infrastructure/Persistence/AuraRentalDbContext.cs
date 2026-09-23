@@ -127,7 +127,7 @@ public sealed class AuraRentalDbContext(DbContextOptions<AuraRentalDbContext> op
             entity.HasIndex(item => item.FormTokenHash).IsUnique();
             entity.HasIndex(item => new { item.BranchId, item.Status, item.RentalStartAt });
             entity.Property(item => item.Status).HasConversion(new EnumValueConverter<ReservationStatus>());
-            entity.HasOne(item => item.Customer).WithMany(item => item.Reservations).HasForeignKey(item => item.CustomerId);
+            entity.HasOne(item => item.Customer).WithMany(item => item.Reservations).HasForeignKey(item => item.CustomerId).IsRequired(false);
             entity.HasOne(item => item.Branch).WithMany().HasForeignKey(item => item.BranchId);
             entity.HasOne(item => item.Creator).WithMany().HasForeignKey(item => item.CreatedBy).OnDelete(DeleteBehavior.Restrict);
         });

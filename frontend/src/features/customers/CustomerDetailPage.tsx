@@ -3,7 +3,7 @@ import { formatMoney } from '@/shared/format/money'
 import { useApiQuery } from '@/shared/hooks/use-api-query'
 import { getCustomer, getCustomerOrders } from './customer.api'
 
-export function CustomerDetailPage({ customerId }: { customerId: string }) {
+export function CustomerDetailPage({ customerId }: { customerId: number }) {
   const customer = useApiQuery(() => getCustomer(customerId), [customerId])
   const orders = useApiQuery(() => getCustomerOrders(customerId), [customerId])
 

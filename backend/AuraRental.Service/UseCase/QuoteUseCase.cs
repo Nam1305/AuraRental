@@ -15,11 +15,6 @@ public sealed class QuoteUseCase(
     public async Task<QuoteDto> Create(CreateQuoteRequest request, CancellationToken cancellationToken)
     {
         Validate(request);
-        if (!await quoteRepository.CustomerExists(request.CustomerId, cancellationToken))
-        {
-            throw new NotFoundException("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng.");
-        }
-
         var itemIds = request.Items.Select(item => item.InventoryItemId).Distinct().ToArray();
         var available = await availabilityRepository.AreAvailable(
             requestContext.BranchId,

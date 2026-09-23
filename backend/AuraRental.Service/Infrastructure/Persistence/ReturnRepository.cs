@@ -8,7 +8,7 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 public sealed class ReturnRepository(AuraRentalDbContext context) : IReturnRepository
 {
     public async Task<IReadOnlyList<Order>> GetQueue(
-        Guid branchId,
+        int branchId,
         IReadOnlyCollection<OrderStatus> statuses,
         int limit,
         CancellationToken cancellationToken)
@@ -31,12 +31,12 @@ public sealed class ReturnRepository(AuraRentalDbContext context) : IReturnRepos
         return await orders.OrderBy(order => order.ReturnedAt).Take(limit).ToListAsync(cancellationToken);
     }
 
-    public async Task<Refund?> LockRefund(Guid refundId, CancellationToken cancellationToken) =>
+    public async Task<Refund?> LockRefund(int refundId, CancellationToken cancellationToken) =>
         await context.Refunds
             .FromSqlInterpolated($"SELECT * FROM aura.refunds WHERE id = {refundId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
-    public Task<Refund?> GetRefund(Guid refundId, Guid branchId, bool tracking, CancellationToken cancellationToken)
+    public Task<Refund?> GetRefund(int refundId, int branchId, bool tracking, CancellationToken cancellationToken)
     {
         IQueryable<Refund> refunds = context.Refunds;
         if (!tracking)
@@ -46,6 +46,8 @@ public sealed class ReturnRepository(AuraRentalDbContext context) : IReturnRepos
 
         return refunds
             .Include(refund => refund.Order)
+                .ThenInclude(order => order.Branch)
+            .Include(refund => refund.Order)
                 .ThenInclude(order => order.Reservation)
                     .ThenInclude(reservation => reservation.Payments)
             .Include(refund => refund.Order)
@@ -54,7 +56,7 @@ public sealed class ReturnRepository(AuraRentalDbContext context) : IReturnRepos
             .SingleOrDefaultAsync(refund => refund.Id == refundId && refund.Order.BranchId == branchId, cancellationToken);
     }
 
-    public Task<Refund?> GetOpenRefundForOrder(Guid orderId, bool tracking, CancellationToken cancellationToken)
+    public Task<Refund?> GetOpenRefundForOrder(int orderId, bool tracking, CancellationToken cancellationToken)
     {
         IQueryable<Refund> refunds = context.Refunds;
         if (!tracking)
@@ -69,20 +71,20 @@ public sealed class ReturnRepository(AuraRentalDbContext context) : IReturnRepos
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<int> GetLatestVersion(Guid orderId, CancellationToken cancellationToken) =>
+    public async Task<int> GetLatestVersion(int orderId, CancellationToken cancellationToken) =>
         await context.Refunds
             .Where(refund => refund.OrderId == orderId)
             .Select(refund => (int?)refund.Version)
             .MaxAsync(cancellationToken) ?? 0;
 
-    public Task<bool> HasNewerOpenRevision(Guid orderId, int version, CancellationToken cancellationToken) =>
+    public Task<bool> HasNewerOpenRevision(int orderId, int version, CancellationToken cancellationToken) =>
         context.Refunds.AnyAsync(
             refund => refund.OrderId == orderId &&
                       refund.Version > version &&
                       (refund.Status == RefundStatus.Draft || refund.Status == RefundStatus.Submitted),
             cancellationToken);
 
-    public async Task<IReadOnlyList<Refund>> GetApprovedRefunds(Guid orderId, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<Refund>> GetApprovedRefunds(int orderId, CancellationToken cancellationToken) =>
         await context.Refunds
             .Where(refund => refund.OrderId == orderId && refund.Status == RefundStatus.Approved)
             .ToListAsync(cancellationToken);

@@ -1,7 +1,7 @@
 import { apiRequest } from '@/shared/api/http-client'
 import type { AvailabilityCriteria, AvailabilityResult } from './availability.types'
 
-export function searchAvailability(branchId: string, criteria: AvailabilityCriteria) {
+export function searchAvailability(branchId: number, criteria: AvailabilityCriteria) {
   const query = new URLSearchParams({
     query: criteria.query,
     size: criteria.size,

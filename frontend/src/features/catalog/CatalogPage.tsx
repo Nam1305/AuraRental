@@ -3,6 +3,7 @@ import { useSession } from '@/features/session/SessionProvider'
 import { AsyncState } from '@/shared/components/AsyncState'
 import { ImageUploadInput } from '@/shared/components/ImageUploadInput'
 import { StoredImage } from '@/shared/components/StoredImage'
+import { MoneyField } from '@/shared/components/MoneyInput'
 import { formatMoney } from '@/shared/format/money'
 import { useApiQuery } from '@/shared/hooks/use-api-query'
 import {
@@ -34,7 +35,7 @@ export function CatalogPage() {
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('true')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [version, setVersion] = useState(0)
   const isManager = user?.role === 'MANAGER'
@@ -99,8 +100,8 @@ export function CatalogPage() {
   )
 }
 
-function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: string; onCancel: () => void; onCreated: (id: string) => void }) {
-  const [product, setProduct] = useState({ code: '', name: '', category: 'DRESS', color: '', material: '', description: '', imagePaths: '' })
+function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: number; onCancel: () => void; onCreated: (id: number) => void }) {
+  const [product, setProduct] = useState({ code: '', name: '', category: 'DRESS', description: '', imagePaths: '' })
   const [variant, setVariant] = useState(EMPTY_VARIANT)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -111,8 +112,8 @@ function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: strin
     event.preventDefault(); setSaving(true); setError(null)
     try {
       const created = await createProduct(branchId, {
-        code: product.code, name: product.name, category: product.category, color: product.color || null,
-        material: product.material || null, description: product.description || null, imagePaths: paths(product.imagePaths),
+        code: product.code, name: product.name, category: product.category, color: null,
+        material: null, description: product.description || null, imagePaths: paths(product.imagePaths),
         variants: [{ size: variant.size, measurements: variant.measurements || null, replacementValue: Number(variant.replacementValue), prices: priceInputs(variant.price1d, variant.price2d, variant.price3d), inventoryItems: assetItems(variant.assetCodes) }],
       })
       onCreated(created.id)
@@ -125,8 +126,6 @@ function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: strin
       <label className="field"><span>Mã mẫu *</span><input required value={product.code} onChange={(event) => setProductField('code', event.target.value)} placeholder="VD: AUR-RED" /></label>
       <label className="field"><span>Tên sản phẩm *</span><input required value={product.name} onChange={(event) => setProductField('name', event.target.value)} /></label>
       <label className="field"><span>Loại *</span><input required value={product.category} onChange={(event) => setProductField('category', event.target.value)} placeholder="DRESS, AO_DAI…" /></label>
-      <label className="field"><span>Màu sắc</span><input value={product.color} onChange={(event) => setProductField('color', event.target.value)} /></label>
-      <label className="field"><span>Chất liệu</span><input value={product.material} onChange={(event) => setProductField('material', event.target.value)} /></label>
       <label className="field"><span>Ảnh sản phẩm</span><ImageUploadInput branchId={branchId} purpose="PRODUCT_IMAGE" value={product.imagePaths} onChange={(value) => setProductField('imagePaths', value)} /></label>
       <label className="field field--wide"><span>Mô tả</span><textarea rows={3} value={product.description} onChange={(event) => setProductField('description', event.target.value)} /></label>
     </div>
@@ -139,16 +138,16 @@ function CreateProductPanel({ branchId, onCancel, onCreated }: { branchId: strin
 function VariantFields({ value, onChange }: { value: typeof EMPTY_VARIANT; onChange: (field: keyof typeof EMPTY_VARIANT, value: string) => void }) {
   return <div className="form-grid">
     <label className="field"><span>Size *</span><input required value={value.size} onChange={(event) => onChange('size', event.target.value)} placeholder="S, M, L hoặc ONE_SIZE" /></label>
-    <label className="field"><span>Giá trị thay thế *</span><input required min="1" type="number" value={value.replacementValue} onChange={(event) => onChange('replacementValue', event.target.value)} /></label>
+    <MoneyField label="Giá trị thay thế" required value={value.replacementValue} onChange={(next) => onChange('replacementValue', next)} />
     <label className="field"><span>Số đo</span><input value={value.measurements} onChange={(event) => onChange('measurements', event.target.value)} placeholder="Ngực 84 · Eo 66" /></label>
-    <label className="field"><span>Giá 1D *</span><input required min="1" type="number" value={value.price1d} onChange={(event) => onChange('price1d', event.target.value)} /></label>
-    <label className="field"><span>Giá 2D</span><input min="1" type="number" value={value.price2d} onChange={(event) => onChange('price2d', event.target.value)} /></label>
-    <label className="field"><span>Giá 3D</span><input min="1" type="number" value={value.price3d} onChange={(event) => onChange('price3d', event.target.value)} /></label>
+    <MoneyField label="Giá 1D" required value={value.price1d} onChange={(next) => onChange('price1d', next)} />
+    <MoneyField label="Giá 2D" value={value.price2d} onChange={(next) => onChange('price2d', next)} />
+    <MoneyField label="Giá 3D" value={value.price3d} onChange={(next) => onChange('price3d', next)} />
     <label className="field"><span>Mã vật lý *</span><textarea required rows={3} value={value.assetCodes} onChange={(event) => onChange('assetCodes', event.target.value)} placeholder="Mỗi dòng một mã, VD: HN-AUR-S-01" /></label>
   </div>
 }
 
-function ProductDetailPanel({ branchId, productId, isManager, canManageBranch, onChanged }: { branchId: string; productId: string; isManager: boolean; canManageBranch: boolean; onChanged: () => void }) {
+function ProductDetailPanel({ branchId, productId, isManager, canManageBranch, onChanged }: { branchId: number; productId: number; isManager: boolean; canManageBranch: boolean; onChanged: () => void }) {
   const [version, setVersion] = useState(0)
   const [editing, setEditing] = useState(false)
   const [addingVariant, setAddingVariant] = useState(false)
@@ -184,7 +183,7 @@ function ProductDetailPanel({ branchId, productId, isManager, canManageBranch, o
   </AsyncState>
 }
 
-function EditProductForm({ branchId, product, onCancel, onSaved }: { branchId: string; product: ProductDetail; onCancel: () => void; onSaved: () => void }) {
+function EditProductForm({ branchId, product, onCancel, onSaved }: { branchId: number; product: ProductDetail; onCancel: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({ name: product.name, category: product.category, color: product.color ?? '', material: product.material ?? '', description: product.description ?? '', imagePaths: product.imagePaths.join('\n') })
   const [error, setError] = useState<Error | null>(null)
   const set = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
@@ -192,7 +191,7 @@ function EditProductForm({ branchId, product, onCancel, onSaved }: { branchId: s
   return <form className="nested-form" onSubmit={submit}><h2>Sửa {product.code}</h2><div className="form-grid"><label className="field"><span>Tên *</span><input required value={form.name} onChange={(event) => set('name', event.target.value)} /></label><label className="field"><span>Loại *</span><input required value={form.category} onChange={(event) => set('category', event.target.value)} /></label><label className="field"><span>Màu</span><input value={form.color} onChange={(event) => set('color', event.target.value)} /></label><label className="field"><span>Chất liệu</span><input value={form.material} onChange={(event) => set('material', event.target.value)} /></label><label className="field"><span>Ảnh sản phẩm</span><ImageUploadInput branchId={branchId} purpose="PRODUCT_IMAGE" value={form.imagePaths} onChange={(value) => set('imagePaths', value)} /></label><label className="field"><span>Mô tả</span><textarea rows={2} value={form.description} onChange={(event) => set('description', event.target.value)} /></label></div>{error && <div className="inline-error">{error.message}</div>}<div className="action-buttons"><button className="button button--primary">Lưu</button><button className="button" type="button" onClick={onCancel}>Hủy</button></div></form>
 }
 
-function AddVariantForm({ branchId, productId, onCancel, onSaved }: { branchId: string; productId: string; onCancel: () => void; onSaved: () => void }) {
+function AddVariantForm({ branchId, productId, onCancel, onSaved }: { branchId: number; productId: number; onCancel: () => void; onSaved: () => void }) {
   const [value, setValue] = useState(EMPTY_VARIANT)
   const [error, setError] = useState<Error | null>(null)
   const set = (field: keyof typeof value, next: string) => setValue((current) => ({ ...current, [field]: next }))
@@ -200,7 +199,7 @@ function AddVariantForm({ branchId, productId, onCancel, onSaved }: { branchId: 
   return <form className="nested-form" onSubmit={submit}><h3>Thêm size</h3><VariantFields value={value} onChange={set} />{error && <div className="inline-error">{error.message}</div>}<div className="action-buttons"><button className="button button--primary">Thêm size</button><button type="button" className="button" onClick={onCancel}>Hủy</button></div></form>
 }
 
-function VariantCard({ branchId, variant, canManage, onChanged }: { branchId: string; variant: ProductVariant; canManage: boolean; onChanged: () => void }) {
+function VariantCard({ branchId, variant, canManage, onChanged }: { branchId: number; variant: ProductVariant; canManage: boolean; onChanged: () => void }) {
   const findPrice = (code: string) => String(variant.prices.find((item) => item.packageCode === code)?.price ?? '')
   const [prices, setPrices] = useState({ one: findPrice('1D'), two: findPrice('2D'), three: findPrice('3D') })
   const [assetCodes, setAssetCodes] = useState('')
@@ -212,7 +211,7 @@ function VariantCard({ branchId, variant, canManage, onChanged }: { branchId: st
   const changeStatus = async (item: InventoryItem, status: InventoryItem['status']) => { setError(null); try { await updateInventoryItem(branchId, item.id, status); setMessage(`Đã cập nhật ${item.assetCode}.`); onChanged() } catch (nextError) { setError(nextError as Error) } }
 
   return <section className="variant-card"><div className="section-heading"><div><span className="eyebrow">Size</span><h3>{variant.size}</h3><small>{variant.measurements || 'Chưa có số đo'} · Giá trị {formatMoney(variant.replacementValue)}</small></div><strong>{variant.inventorySummary.usable}/{variant.inventorySummary.total} usable</strong></div>
-    <div className="price-editor">{(['one', 'two', 'three'] as const).map((key, index) => <label className="field" key={key}><span>{index + 1}D</span><input disabled={!canManage} type="number" min="1" value={prices[key]} onChange={(event) => setPrices((current) => ({ ...current, [key]: event.target.value }))} /></label>)}{canManage && <button className="button" type="button" onClick={() => void savePrices()}>Lưu giá</button>}</div>
+    <div className="price-editor">{(['one', 'two', 'three'] as const).map((key, index) => <MoneyField key={key} label={`Giá ${index + 1}D`} required={key === 'one'} disabled={!canManage} value={prices[key]} onChange={(next) => setPrices((current) => ({ ...current, [key]: next }))} />)}{canManage && <button className="button" type="button" onClick={() => void savePrices()}>Lưu giá</button>}</div>
     <div className="inventory-list">{variant.inventoryItems.map((item) => <div className="inventory-row" key={item.id}><div><strong>{item.assetCode}</strong></div>{canManage ? <select value={item.status} onChange={(event) => void changeStatus(item, event.target.value as InventoryItem['status'])}><option value="USABLE">Sẵn sàng</option><option value="MAINTENANCE">Bảo trì</option><option value="LOST">Thất lạc</option><option value="RETIRED">Ngừng dùng</option></select> : <span className="status-pill">{item.status}</span>}</div>)}</div>
     {canManage && <div className="add-assets"><label className="field"><span>Thêm mã vật lý</span><textarea rows={2} value={assetCodes} onChange={(event) => setAssetCodes(event.target.value)} placeholder="Mỗi dòng một mã" /></label><button className="button" type="button" disabled={!assetCodes.trim()} onClick={() => void addAssets()}>Thêm vào kho</button></div>}
     {message && <div className="success-note">{message}</div>}{error && <div className="inline-error">{error.message}</div>}

@@ -21,7 +21,7 @@ export function AppRouter() {
   else if (pathname === '/availability') page = <AvailabilityPage />
   else if (pathname === '/catalog') page = <CatalogPage />
   else if (pathname === '/customers') page = <CustomersPage />
-  else if (pathname.startsWith('/customers/')) page = <CustomerDetailPage customerId={pathname.split('/')[2] ?? ''} />
+  else if (pathname.startsWith('/customers/')) page = <CustomerDetailPage customerId={Number(pathname.split('/')[2])} />
   else if (pathname === '/reservations') page = <ReservationsPage />
   else if (pathname === '/orders') page = <OrdersPage />
   else if (pathname === '/returns') page = <ReturnsPage />

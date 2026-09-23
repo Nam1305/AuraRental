@@ -11,6 +11,7 @@ namespace AuraRental.Service.UseCase;
 
 public sealed class PublicRentalFormUseCase(
     IRentalRepository rentalRepository,
+    ICustomerRepository customerRepository,
     IUnitOfWork unitOfWork,
     ISecureTokenService secureTokenService,
     IOperationsEventPublisher eventPublisher) : IPublicRentalFormUseCase
@@ -75,6 +76,18 @@ public sealed class PublicRentalFormUseCase(
         }
 
         var phone = NormalizePhone(request.CustomerPhone);
+        var customer = await customerRepository.GetByPhone(phone, cancellationToken);
+        if (customer is null)
+        {
+            customer = new Customer
+            {
+                Name = request.CustomerName.Trim(),
+                Phone = phone,
+                Address = request.DeliveryAddress.Trim()
+            };
+            await customerRepository.Add(customer, cancellationToken);
+        }
+
         var depositRemaining = RentalRules.DepositRemaining(reservation);
         var status = depositRemaining > 0
             ? OrderStatus.PendingDeposit
@@ -84,9 +97,8 @@ public sealed class PublicRentalFormUseCase(
         var now = DateTimeOffset.UtcNow;
         var order = new Order
         {
-            Id = Guid.NewGuid(),
             OrderNo = RentalRules.CreateNumber(reservation.Branch.Code),
-            CustomerId = reservation.CustomerId,
+            CustomerId = customer.Id,
             ReservationId = reservation.Id,
             BranchId = reservation.BranchId,
             Status = status,
@@ -96,7 +108,6 @@ public sealed class PublicRentalFormUseCase(
             CreatedAt = now,
             Items = reservation.Items.Select(item => new OrderItem
             {
-                Id = Guid.NewGuid(),
                 InventoryItemId = item.InventoryItemId,
                 ProductName = item.InventoryItem.Variant.Product.Name,
                 Size = item.InventoryItem.Variant.Size,
@@ -110,6 +121,7 @@ public sealed class PublicRentalFormUseCase(
         };
 
         reservation.Status = ReservationStatus.ConvertedToOrder;
+        reservation.CustomerId = customer.Id;
         reservation.OtpUsedAt = now;
         reservation.Order = order;
         rentalRepository.AddOrder(order);

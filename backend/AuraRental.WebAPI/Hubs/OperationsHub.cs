@@ -8,11 +8,11 @@ namespace AuraRental.WebAPI.Hubs;
 [Authorize]
 public sealed class OperationsHub(IUserRepository userRepository) : Hub
 {
-    public async Task JoinBranch(Guid branchId)
+    public async Task JoinBranch(int branchId)
     {
         var subject = Context.User?.FindFirstValue("sub")
             ?? Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(subject, out var userId))
+        if (!int.TryParse(subject, out var userId))
         {
             throw new HubException("UNAUTHORIZED");
         }
@@ -26,8 +26,8 @@ public sealed class OperationsHub(IUserRepository userRepository) : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(branchId), Context.ConnectionAborted);
     }
 
-    public Task LeaveBranch(Guid branchId) =>
+    public Task LeaveBranch(int branchId) =>
         Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(branchId), Context.ConnectionAborted);
 
-    public static string GroupName(Guid branchId) => $"branch:{branchId}";
+    public static string GroupName(int branchId) => $"branch:{branchId}";
 }

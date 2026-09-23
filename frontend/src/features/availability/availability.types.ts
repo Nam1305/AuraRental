@@ -5,7 +5,7 @@ export type RentalPrice = {
 }
 
 export type AvailableItem = {
-  inventoryItemId: string
+  inventoryItemId: number
   assetCode: string
   status: string
   availableForWholePeriod: boolean
@@ -16,9 +16,10 @@ export type AvailableItem = {
 }
 
 export type AvailabilityGroup = {
-  productId: string
-  variantId: string
+  productId: number
+  variantId: number
   productName: string
+  imagePaths: string[]
   size: string
   measurements: string | null
   availableCount: number

@@ -22,8 +22,6 @@ public sealed class ReservationUseCase(
     public async Task<ReservationDto> Create(CreateReservationRequest request, CancellationToken cancellationToken)
     {
         ValidateCreateRequest(request);
-        var customer = await rentalRepository.GetCustomer(request.CustomerId, cancellationToken)
-            ?? throw new NotFoundException("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng.");
         var branch = await rentalRepository.GetBranch(requestContext.BranchId, cancellationToken)
             ?? throw new NotFoundException("BRANCH_NOT_FOUND", "Không tìm thấy chi nhánh.");
 
@@ -61,9 +59,7 @@ public sealed class ReservationUseCase(
         var now = DateTimeOffset.UtcNow;
         var reservation = new Reservation
         {
-            Id = Guid.NewGuid(),
             ReservationNo = RentalRules.CreateNumber(branch.Code, "R"),
-            CustomerId = customer.Id,
             BranchId = branch.Id,
             Status = ReservationStatus.Active,
             RentalStartAt = request.RentalStartAt.ToUniversalTime(),
@@ -80,12 +76,13 @@ public sealed class ReservationUseCase(
             [
                 new Payment
                 {
-                    Id = Guid.NewGuid(),
                     Type = paymentType,
                     Amount = request.ReceivedPayment.Amount,
                     Method = RequireText(request.ReceivedPayment.Method, "PAYMENT_METHOD_REQUIRED", "Phương thức thanh toán là bắt buộc."),
                     Status = PaymentStatus.Confirmed,
-                    TransactionRef = request.ReceivedPayment.TransactionRef?.Trim(),
+                    // The shop does not need to type a banking reference while creating a hold.
+                    // Use one consistent, traceable reference for every initial payment.
+                    TransactionRef = RentalRules.CreateTransactionReference(branch.Code),
                     ProofPath = request.ReceivedPayment.ProofPath?.Trim(),
                     RecordedBy = requestContext.UserId,
                     ConfirmedBy = requestContext.UserId,
@@ -129,8 +126,8 @@ public sealed class ReservationUseCase(
             reservation.ReservationNo,
             ApiText.EnumValue(reservation.Status),
             reservation.CustomerId,
-            reservation.Customer.Name,
-            RentalRules.MaskPhone(reservation.Customer.Phone),
+            reservation.Customer?.Name ?? "Chờ khách điền form",
+            reservation.Customer is null ? "Chưa có SĐT" : RentalRules.MaskPhone(reservation.Customer.Phone),
             string.Join(", ", reservation.Items.Select(ItemSummary)),
             reservation.RentalStartAt,
             reservation.RentalEndAt,
@@ -139,14 +136,14 @@ public sealed class ReservationUseCase(
             reservation.Order is null ? "NOT_SUBMITTED" : "SUBMITTED")).ToList();
     }
 
-    public async Task<ReservationDto> Get(Guid reservationId, CancellationToken cancellationToken)
+    public async Task<ReservationDto> Get(int reservationId, CancellationToken cancellationToken)
     {
         var reservation = await GetRequired(reservationId, false, cancellationToken);
         return ToDto(reservation, null);
     }
 
     public async Task<ReissueOtpDto> ReissueOtp(
-        Guid reservationId,
+        int reservationId,
         ReissueOtpRequest request,
         CancellationToken cancellationToken)
     {
@@ -169,7 +166,7 @@ public sealed class ReservationUseCase(
     }
 
     public async Task<ReservationDto> UpdateRentalSelection(
-        Guid reservationId,
+        int reservationId,
         UpdateRentalSelectionRequest request,
         CancellationToken cancellationToken)
     {
@@ -224,7 +221,7 @@ public sealed class ReservationUseCase(
     }
 
     public async Task<CancelReservationDto> Cancel(
-        Guid reservationId,
+        int reservationId,
         CancelReservationRequest request,
         CancellationToken cancellationToken)
     {
@@ -252,7 +249,7 @@ public sealed class ReservationUseCase(
     }
 
     public async Task<RecordPaymentDto> RecordPayment(
-        Guid reservationId,
+        int reservationId,
         RecordPaymentRequest request,
         CancellationToken cancellationToken)
     {
@@ -287,7 +284,6 @@ public sealed class ReservationUseCase(
 
         var payment = new Payment
         {
-            Id = Guid.NewGuid(),
             ReservationId = reservation.Id,
             Type = paymentType,
             Amount = request.Amount,
@@ -303,7 +299,7 @@ public sealed class ReservationUseCase(
         reservation.Payments.Add(payment);
         // The reservation is loaded through a row-lock query before its graph is hydrated.
         // Explicitly mark a new payment as Added; relationship discovery alone may treat a
-        // non-empty client-generated UUID as an existing row and issue an UPDATE.
+        // Explicitly mark a new database-generated integer ID as Added.
         rentalRepository.AddPayment(payment);
         UpdateOrderAfterDeposit(reservation);
         await unitOfWork.SaveChanges(cancellationToken);
@@ -317,7 +313,7 @@ public sealed class ReservationUseCase(
             reservation.Order is null ? null : ApiText.EnumValue(reservation.Order.Status));
     }
 
-    private async Task<Reservation> GetRequired(Guid reservationId, bool tracking, CancellationToken cancellationToken) =>
+    private async Task<Reservation> GetRequired(int reservationId, bool tracking, CancellationToken cancellationToken) =>
         await rentalRepository.GetReservation(reservationId, requestContext.BranchId, tracking, cancellationToken)
             ?? throw new NotFoundException("RESERVATION_NOT_FOUND", "Không tìm thấy reservation tại chi nhánh này.");
 
@@ -336,7 +332,6 @@ public sealed class ReservationUseCase(
 
         return new ReservationItem
         {
-            Id = Guid.NewGuid(),
             InventoryItemId = inventoryItem.Id,
             PackageCode = selectedPrice.PackageCode,
             ReplacementValue = inventoryItem.Variant.ReplacementValue,
@@ -367,6 +362,11 @@ public sealed class ReservationUseCase(
         decimal depositRequired,
         decimal slotDepositAmount)
     {
+        if (amount <= 0)
+        {
+            throw new ValidationException("PAYMENT_AMOUNT_INVALID", "Số tiền cọc phải lớn hơn 0.");
+        }
+
         if (paymentType == PaymentType.SlotDeposit)
         {
             if (amount != slotDepositAmount)
@@ -377,9 +377,9 @@ public sealed class ReservationUseCase(
             return;
         }
 
-        if (paymentType != PaymentType.TargetDeposit || amount != depositRequired)
+        if (paymentType != PaymentType.TargetDeposit || amount > depositRequired)
         {
-            throw new ValidationException("PAYMENT_AMOUNT_INVALID", "Cọc đích ban đầu phải bằng đúng số tiền cọc yêu cầu.");
+            throw new ValidationException("PAYMENT_AMOUNT_INVALID", "Cọc ban đầu phải không vượt quá số tiền cọc yêu cầu.");
         }
     }
 
@@ -391,7 +391,9 @@ public sealed class ReservationUseCase(
             reservation.ReservationNo,
             ApiText.EnumValue(reservation.Status),
             new ReservationBranchDto(reservation.Branch.Id, reservation.Branch.Code, reservation.Branch.Name),
-            new ReservationCustomerDto(reservation.Customer.Id, reservation.Customer.Name, reservation.Customer.Phone),
+            reservation.Customer is null
+                ? null
+                : new ReservationCustomerDto(reservation.Customer.Id, reservation.Customer.Name, reservation.Customer.Phone),
             reservation.RentalStartAt,
             reservation.RentalEndAt,
             new ReservationDepositDto(

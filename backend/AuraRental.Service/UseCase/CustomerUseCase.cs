@@ -30,7 +30,7 @@ public sealed class CustomerUseCase(
             customer.Orders.Count == 0 ? null : customer.Orders.Max(order => order.CreatedAt))).ToList();
     }
 
-    public async Task<CustomerDto> Get(Guid customerId, CancellationToken cancellationToken) =>
+    public async Task<CustomerDto> Get(int customerId, CancellationToken cancellationToken) =>
         ToDto(await GetRequired(customerId, cancellationToken));
 
     public async Task<CustomerDto> Create(CreateCustomerRequest request, CancellationToken cancellationToken)
@@ -47,7 +47,6 @@ public sealed class CustomerUseCase(
 
         var customer = new Customer
         {
-            Id = Guid.NewGuid(),
             Name = request.Name.Trim(),
             Phone = phone,
             InstagramHandle = NormalizeInstagram(request.InstagramHandle),
@@ -60,7 +59,7 @@ public sealed class CustomerUseCase(
     }
 
     public async Task<CustomerDto> Update(
-        Guid customerId,
+        int customerId,
         UpdateCustomerRequest request,
         CancellationToken cancellationToken)
     {
@@ -74,7 +73,7 @@ public sealed class CustomerUseCase(
     }
 
     public async Task<IReadOnlyList<CustomerOrderHistoryDto>> GetOrderHistory(
-        Guid customerId,
+        int customerId,
         string? status,
         int limit,
         CancellationToken cancellationToken)
@@ -102,7 +101,7 @@ public sealed class CustomerUseCase(
             order.CreatedAt)).ToList();
     }
 
-    private async Task<Customer> GetRequired(Guid customerId, CancellationToken cancellationToken) =>
+    private async Task<Customer> GetRequired(int customerId, CancellationToken cancellationToken) =>
         await customerRepository.Get(customerId, cancellationToken)
             ?? throw new NotFoundException("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng.");
 

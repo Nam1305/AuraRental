@@ -61,11 +61,11 @@ public sealed class OrderUseCase(
         }).ToList();
     }
 
-    public async Task<OrderDetailDto> Get(Guid orderId, CancellationToken cancellationToken) =>
+    public async Task<OrderDetailDto> Get(int orderId, CancellationToken cancellationToken) =>
         ToDetail(await GetRequired(orderId, false, cancellationToken));
 
     public async Task<VerifyIdentityDto> VerifyIdentity(
-        Guid orderId,
+        int orderId,
         VerifyIdentityRequest request,
         CancellationToken cancellationToken)
     {
@@ -103,7 +103,7 @@ public sealed class OrderUseCase(
     }
 
     public async Task<CancelOrderDto> Cancel(
-        Guid orderId,
+        int orderId,
         CancelOrderRequest request,
         CancellationToken cancellationToken)
     {
@@ -138,11 +138,11 @@ public sealed class OrderUseCase(
         return ToCancelResult(order);
     }
 
-    public Task<OrderTransitionDto> Prepare(Guid orderId, CancellationToken cancellationToken) =>
+    public Task<OrderTransitionDto> Prepare(int orderId, CancellationToken cancellationToken) =>
         Transition(orderId, OrderStatus.Confirmed, order => order.Status = OrderStatus.Preparing, cancellationToken);
 
     public Task<OrderTransitionDto> StartDelivery(
-        Guid orderId,
+        int orderId,
         StartDeliveryRequest request,
         CancellationToken cancellationToken) =>
         Transition(orderId, OrderStatus.Preparing, order =>
@@ -152,7 +152,7 @@ public sealed class OrderUseCase(
         }, cancellationToken);
 
     public Task<OrderTransitionDto> CompleteDelivery(
-        Guid orderId,
+        int orderId,
         CompleteDeliveryRequest request,
         CancellationToken cancellationToken) =>
         Transition(orderId, OrderStatus.Preparing, order =>
@@ -168,7 +168,7 @@ public sealed class OrderUseCase(
         }, cancellationToken);
 
     public Task<OrderTransitionDto> StartReturnDelivery(
-        Guid orderId,
+        int orderId,
         StartDeliveryRequest request,
         CancellationToken cancellationToken) =>
         Transition(orderId, OrderStatus.Renting, order =>
@@ -178,7 +178,7 @@ public sealed class OrderUseCase(
         }, cancellationToken);
 
     public Task<OrderTransitionDto> CompleteReturnDelivery(
-        Guid orderId,
+        int orderId,
         CompleteReturnDeliveryRequest request,
         CancellationToken cancellationToken) =>
         Transition(orderId, OrderStatus.Renting, order =>
@@ -193,7 +193,7 @@ public sealed class OrderUseCase(
             order.Status = OrderStatus.Inspecting;
         }, cancellationToken);
 
-    public async Task<PaymentActionDto> ConfirmPayment(Guid paymentId, CancellationToken cancellationToken)
+    public async Task<PaymentActionDto> ConfirmPayment(int paymentId, CancellationToken cancellationToken)
     {
         var initial = await rentalRepository.GetPayment(paymentId, requestContext.BranchId, false, cancellationToken)
             ?? throw new NotFoundException("PAYMENT_NOT_FOUND", "Không tìm thấy giao dịch.");
@@ -225,7 +225,7 @@ public sealed class OrderUseCase(
     }
 
     public async Task<PaymentActionDto> VoidPayment(
-        Guid paymentId,
+        int paymentId,
         PaymentActionRequest request,
         CancellationToken cancellationToken)
     {
@@ -259,7 +259,7 @@ public sealed class OrderUseCase(
     }
 
     private async Task<OrderTransitionDto> Transition(
-        Guid orderId,
+        int orderId,
         OrderStatus requiredStatus,
         Action<Order> change,
         CancellationToken cancellationToken)
@@ -279,7 +279,7 @@ public sealed class OrderUseCase(
         return ToTransition(order);
     }
 
-    private async Task<Order> GetRequired(Guid orderId, bool tracking, CancellationToken cancellationToken) =>
+    private async Task<Order> GetRequired(int orderId, bool tracking, CancellationToken cancellationToken) =>
         await rentalRepository.GetOrder(orderId, requestContext.BranchId, tracking, cancellationToken)
             ?? throw new NotFoundException("ORDER_NOT_FOUND", "Không tìm thấy order tại chi nhánh này.");
 

@@ -5,7 +5,7 @@ namespace AuraRental.Service.DTOs.Availability;
 public sealed record AvailabilityCriteriaDto(DateTimeOffset StartAt, DateTimeOffset EndAt);
 
 public sealed record AvailableInventoryItemDto(
-    Guid InventoryItemId,
+    int InventoryItemId,
     string AssetCode,
     string Status,
     bool AvailableForWholePeriod,
@@ -15,9 +15,10 @@ public sealed record AvailableInventoryItemDto(
     string? ReferenceNo);
 
 public sealed record AvailabilityGroupDto(
-    Guid ProductId,
-    Guid VariantId,
+    int ProductId,
+    int VariantId,
     string ProductName,
+    IReadOnlyList<string> ImagePaths,
     string Size,
     string? Measurements,
     int AvailableCount,
@@ -29,7 +30,7 @@ public sealed record AvailabilityResultDto(
     IReadOnlyList<AvailabilityGroupDto> Groups);
 
 public sealed record InventoryOverviewDto(
-    Guid VariantId,
+    int VariantId,
     string ProductName,
     string Size,
     int Total,

@@ -1,5 +1,5 @@
 export type ProductListItem = {
-  id: string
+  id: number
   code: string
   name: string
   category: string
@@ -14,13 +14,13 @@ export type ProductListItem = {
 
 export type RentalPrice = { packageCode: string; label: string; price: number }
 export type InventoryItem = {
-  id: string
+  id: number
   assetCode: string
   status: 'USABLE' | 'MAINTENANCE' | 'LOST' | 'RETIRED'
 }
 
 export type ProductVariant = {
-  id: string
+  id: number
   size: string
   measurements: string | null
   replacementValue: number
@@ -30,7 +30,7 @@ export type ProductVariant = {
 }
 
 export type ProductDetail = {
-  id: string
+  id: number
   code: string
   name: string
   category: string

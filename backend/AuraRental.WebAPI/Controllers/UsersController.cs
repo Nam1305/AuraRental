@@ -19,10 +19,10 @@ public sealed class UsersController(IAdminUseCase adminUseCase) : ApiControllerB
         CancellationToken cancellationToken = default) =>
         ResponseData(await adminUseCase.SearchUsers(query, active, limit, cancellationToken));
 
-    [HttpPut("{userId:guid}/branches")]
+    [HttpPut("{userId:int}/branches")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<UserListItemDto>>> ReplaceBranches(
-        Guid userId,
+        int userId,
         [FromBody] ReplaceUserBranchesRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await adminUseCase.ReplaceUserBranches(userId, request, cancellationToken));

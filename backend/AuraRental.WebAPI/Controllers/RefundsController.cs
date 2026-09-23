@@ -13,29 +13,29 @@ namespace AuraRental.WebAPI.Controllers;
 [Idempotent]
 public sealed class RefundsController(IReturnUseCase returnUseCase) : ApiControllerBase
 {
-    [HttpPost("{refundId:guid}/submit")]
+    [HttpPost("{refundId:int}/submit")]
     public async Task<ActionResult<ApiResponse<RefundDto>>> Submit(
-        Guid refundId,
+        int refundId,
         CancellationToken cancellationToken) =>
         ResponseData(await returnUseCase.SubmitRefund(refundId, cancellationToken));
 
-    [HttpPost("{refundId:guid}/return-for-review")]
+    [HttpPost("{refundId:int}/return-for-review")]
     public async Task<ActionResult<ApiResponse<RefundDto>>> ReturnForReview(
-        Guid refundId,
+        int refundId,
         [FromBody] ReturnForReviewRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await returnUseCase.ReturnForReview(refundId, request, cancellationToken));
 
-    [HttpPost("{refundId:guid}/approve")]
+    [HttpPost("{refundId:int}/approve")]
     public async Task<ActionResult<ApiResponse<ApproveRefundDto>>> Approve(
-        Guid refundId,
+        int refundId,
         [FromBody] ApproveRefundRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await returnUseCase.Approve(refundId, request, cancellationToken));
 
-    [HttpPost("{refundId:guid}/revisions")]
+    [HttpPost("{refundId:int}/revisions")]
     public async Task<ActionResult<ApiResponse<RefundDto>>> CreateRevision(
-        Guid refundId,
+        int refundId,
         [FromBody] CreateRefundRevisionRequest request,
         CancellationToken cancellationToken)
     {
@@ -43,9 +43,9 @@ public sealed class RefundsController(IReturnUseCase returnUseCase) : ApiControl
         return StatusCode(StatusCodes.Status201Created, ResponseData(revision));
     }
 
-    [HttpPost("{refundId:guid}/settle")]
+    [HttpPost("{refundId:int}/settle")]
     public async Task<ActionResult<ApiResponse<SettleRefundDto>>> Settle(
-        Guid refundId,
+        int refundId,
         [FromBody] SettleRefundRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await returnUseCase.Settle(refundId, request, cancellationToken));

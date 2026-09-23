@@ -13,16 +13,16 @@ namespace AuraRental.WebAPI.Controllers;
 [Idempotent]
 public sealed class ProductVariantsController(ICatalogUseCase catalogUseCase) : ApiControllerBase
 {
-    [HttpPut("{variantId:guid}/rental-prices")]
+    [HttpPut("{variantId:int}/rental-prices")]
     public async Task<ActionResult<ApiResponse<RentalPriceSetDto>>> ReplaceRentalPrices(
-        Guid variantId,
+        int variantId,
         [FromBody] ReplaceRentalPricesRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await catalogUseCase.ReplaceRentalPrices(variantId, request, cancellationToken));
 
-    [HttpPost("{variantId:guid}/inventory-items")]
+    [HttpPost("{variantId:int}/inventory-items")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<InventoryItemDto>>>> AddInventoryItems(
-        Guid variantId,
+        int variantId,
         [FromBody] AddInventoryItemsRequest request,
         CancellationToken cancellationToken)
     {

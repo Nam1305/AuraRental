@@ -4,10 +4,10 @@ namespace AuraRental.Service.Interface.Persistence;
 
 public interface IQuoteRepository
 {
-    Task<bool> CustomerExists(Guid customerId, CancellationToken cancellationToken);
+    Task<bool> CustomerExists(int customerId, CancellationToken cancellationToken);
     Task<IReadOnlyList<InventoryItem>> GetInventoryItems(
-        Guid branchId,
-        IReadOnlyCollection<Guid> inventoryItemIds,
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
         CancellationToken cancellationToken);
     Task<decimal> GetSlotDepositAmount(CancellationToken cancellationToken);
 }

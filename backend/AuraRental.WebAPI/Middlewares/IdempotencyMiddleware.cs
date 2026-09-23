@@ -26,9 +26,9 @@ public sealed class IdempotencyMiddleware(
             return;
         }
 
-        if (!Guid.TryParse(context.Request.Headers["Idempotency-Key"], out var key))
+        if (!int.TryParse(context.Request.Headers["Idempotency-Key"], out var key))
         {
-            throw new ValidationException("IDEMPOTENCY_KEY_REQUIRED", "Header Idempotency-Key phải là UUID hợp lệ.");
+            throw new ValidationException("IDEMPOTENCY_KEY_REQUIRED", "Header Idempotency-Key phải là số nguyên hợp lệ.");
         }
 
         var body = await ReadRequestBody(context.Request);
@@ -37,7 +37,6 @@ public sealed class IdempotencyMiddleware(
         var operation = GetOperation(context);
         var record = new IdempotencyRecord
         {
-            Id = Guid.NewGuid(),
             IdempotencyKey = key,
             Scope = scope,
             Operation = operation,
@@ -117,7 +116,7 @@ public sealed class IdempotencyMiddleware(
         }
     }
 
-    private async Task Complete(Guid recordId, int status, string responseBody, CancellationToken cancellationToken)
+    private async Task Complete(int recordId, int status, string responseBody, CancellationToken cancellationToken)
     {
         await using var database = await contextFactory.CreateDbContextAsync(cancellationToken);
         var record = await database.IdempotencyRecords.SingleAsync(item => item.Id == recordId, cancellationToken);
@@ -126,7 +125,7 @@ public sealed class IdempotencyMiddleware(
         await database.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task Delete(Guid recordId, CancellationToken cancellationToken)
+    private async Task Delete(int recordId, CancellationToken cancellationToken)
     {
         await using var database = await contextFactory.CreateDbContextAsync(cancellationToken);
         await database.IdempotencyRecords.Where(item => item.Id == recordId).ExecuteDeleteAsync(cancellationToken);

@@ -1,5 +1,5 @@
 export type Branch = {
-  id: string
+  id: number
   code: string
   name: string
   address: string
@@ -7,11 +7,11 @@ export type Branch = {
 }
 
 export type CurrentUser = {
-  id: string
+  id: number
   name: string
   username: string
   email: string
   role: 'STAFF' | 'MANAGER'
   branches: Branch[]
-  suggestedBranchId: string | null
+  suggestedBranchId: number | null
 }

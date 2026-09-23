@@ -2,8 +2,8 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class Product
 {
-    public Guid Id { get; set; }
-    public Guid BranchId { get; set; }
+    public int Id { get; set; }
+    public int BranchId { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string Category { get; set; } = null!;

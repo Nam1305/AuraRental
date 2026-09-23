@@ -25,7 +25,7 @@ export type SubmitPublicRentalFormRequest = {
 }
 
 export type SubmittedPublicRentalForm = {
-  orderId: string
+  orderId: number
   orderNo: string
   status: string
   branchName: string

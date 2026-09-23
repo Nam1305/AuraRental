@@ -51,7 +51,7 @@ public sealed class CatalogUseCase(
         }).ToList();
     }
 
-    public async Task<ProductDetailDto> GetProduct(Guid productId, CancellationToken cancellationToken)
+    public async Task<ProductDetailDto> GetProduct(int productId, CancellationToken cancellationToken)
     {
         var product = await catalogRepository.GetProduct(requestContext.BranchId, productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
@@ -90,7 +90,6 @@ public sealed class CatalogUseCase(
 
         var product = new Product
         {
-            Id = Guid.NewGuid(),
             BranchId = requestContext.BranchId,
             Code = code,
             Name = request.Name.Trim(),
@@ -107,7 +106,7 @@ public sealed class CatalogUseCase(
     }
 
     public async Task<ProductDetailDto> UpdateProduct(
-        Guid productId,
+        int productId,
         UpdateProductRequest request,
         CancellationToken cancellationToken)
     {
@@ -131,7 +130,7 @@ public sealed class CatalogUseCase(
     }
 
     public async Task<ProductVariantDto> AddVariant(
-        Guid productId,
+        int productId,
         CreateProductVariantInput request,
         CancellationToken cancellationToken)
     {
@@ -161,7 +160,7 @@ public sealed class CatalogUseCase(
     }
 
     public async Task<RentalPriceSetDto> ReplaceRentalPrices(
-        Guid variantId,
+        int variantId,
         ReplaceRentalPricesRequest request,
         CancellationToken cancellationToken)
     {
@@ -180,7 +179,7 @@ public sealed class CatalogUseCase(
     }
 
     public async Task<IReadOnlyList<InventoryItemDto>> AddInventoryItems(
-        Guid variantId,
+        int variantId,
         AddInventoryItemsRequest request,
         CancellationToken cancellationToken)
     {
@@ -195,7 +194,6 @@ public sealed class CatalogUseCase(
 
         var items = request.Items.Select(item => new InventoryItem
         {
-            Id = Guid.NewGuid(),
             VariantId = variantId,
             BranchId = requestContext.BranchId,
             AssetCode = item.AssetCode.Trim().ToUpperInvariant(),
@@ -207,7 +205,7 @@ public sealed class CatalogUseCase(
     }
 
     public async Task<InventoryItemDto> UpdateInventoryItem(
-        Guid inventoryItemId,
+        int inventoryItemId,
         UpdateInventoryItemRequest request,
         CancellationToken cancellationToken)
     {
@@ -250,7 +248,6 @@ public sealed class CatalogUseCase(
         ValidateVariant(request);
         var variant = new ProductVariant
         {
-            Id = Guid.NewGuid(),
             Size = request.Size.Trim().ToUpperInvariant(),
             Measurements = request.Measurements?.Trim(),
             ReplacementValue = request.ReplacementValue,
@@ -266,7 +263,6 @@ public sealed class CatalogUseCase(
         {
             variant.InventoryItems.Add(new InventoryItem
             {
-                Id = Guid.NewGuid(),
                 VariantId = variant.Id,
                 BranchId = requestContext.BranchId,
                 AssetCode = item.AssetCode.Trim().ToUpperInvariant(),
@@ -277,10 +273,9 @@ public sealed class CatalogUseCase(
         return variant;
     }
 
-    private List<BranchRentalPrice> CreatePrices(Guid variantId, IReadOnlyList<RentalPriceInput> inputs) =>
+    private List<BranchRentalPrice> CreatePrices(int variantId, IReadOnlyList<RentalPriceInput> inputs) =>
         inputs.Select(input => new BranchRentalPrice
         {
-            Id = Guid.NewGuid(),
             BranchId = requestContext.BranchId,
             VariantId = variantId,
             PackageCode = input.PackageCode.Trim().ToUpperInvariant(),

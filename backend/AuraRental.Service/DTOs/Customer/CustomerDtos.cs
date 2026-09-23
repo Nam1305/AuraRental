@@ -1,14 +1,14 @@
 namespace AuraRental.Service.DTOs.Customer;
 
 public sealed record CustomerDto(
-    Guid Id,
+    int Id,
     string Name,
     string Phone,
     string? InstagramHandle,
     string? Address);
 
 public sealed record CustomerListItemDto(
-    Guid Id,
+    int Id,
     string Name,
     string Phone,
     string? InstagramHandle,
@@ -30,7 +30,7 @@ public sealed record UpdateCustomerRequest(
 public sealed record CustomerOrderItemDto(string ProductName, string Size, string AssetCode);
 
 public sealed record CustomerOrderHistoryDto(
-    Guid OrderId,
+    int OrderId,
     string OrderNo,
     string BranchCode,
     string BranchName,

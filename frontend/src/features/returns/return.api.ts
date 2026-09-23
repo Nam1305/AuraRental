@@ -1,13 +1,13 @@
 import { apiRequest, idempotencyHeaders } from '@/shared/api/http-client'
-import type { RefundResult, ReturnQueueItem } from './return.types'
+import type { RefundReceipt, RefundResult, ReturnQueueItem } from './return.types'
 
-export const getReturnQueue = (branchId: string) =>
+export const getReturnQueue = (branchId: number) =>
   apiRequest<ReturnQueueItem[]>('/api/v1/returns?limit=50', { branchId })
 
 export const inspectOrderItem = (
-  branchId: string,
-  orderId: string,
-  orderItemId: string,
+  branchId: number,
+  orderId: number,
+  orderItemId: number,
   body: {
     condition: string
     actualRentalFee: number
@@ -20,27 +20,30 @@ export const inspectOrderItem = (
   method: 'PUT', branchId, headers: idempotencyHeaders(), body: JSON.stringify(body),
 })
 
-export const createRefund = (branchId: string, orderId: string, adjustmentReason: string | null) =>
+export const createRefund = (branchId: number, orderId: number, adjustmentReason: string | null) =>
   apiRequest<RefundResult>(`/api/v1/orders/${orderId}/refunds`, {
     method: 'POST', branchId, headers: idempotencyHeaders(), body: JSON.stringify({ adjustmentReason }),
   })
 
-const refundAction = <T>(branchId: string, refundId: string, action: string, body?: unknown) =>
+const refundAction = <T>(branchId: number, refundId: number, action: string, body?: unknown) =>
   apiRequest<T>(`/api/v1/refunds/${refundId}/${action}`, {
     method: 'POST', branchId, headers: idempotencyHeaders(),
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-export const submitRefund = (branchId: string, refundId: string) =>
+export const submitRefund = (branchId: number, refundId: number) =>
   refundAction<RefundResult>(branchId, refundId, 'submit')
 
-export const approveRefund = (branchId: string, refundId: string, expectedVersion: number) =>
+export const approveRefund = (branchId: number, refundId: number, expectedVersion: number) =>
   refundAction(branchId, refundId, 'approve', { expectedVersion })
 
-export const returnRefundForReview = (branchId: string, refundId: string, reason: string) =>
+export const returnRefundForReview = (branchId: number, refundId: number, reason: string) =>
   refundAction<RefundResult>(branchId, refundId, 'return-for-review', { reason })
 
-export const settleRefund = (branchId: string, refundId: string, method: string, transactionRef: string | null) =>
+export const settleRefund = (branchId: number, refundId: number, method: string, transactionRef: string | null) =>
   refundAction(branchId, refundId, 'settle', {
     method, transactionRef, proofPath: null, paidAt: new Date().toISOString(),
   })
+
+export const getRefundReceipt = (branchId: number, refundId: number) =>
+  apiRequest<RefundReceipt>(`/api/v1/refunds/${refundId}/receipt`, { branchId })

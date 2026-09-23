@@ -16,7 +16,7 @@ type PresignedDownload = {
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export async function uploadImage(branchId: string, purpose: UploadPurpose, file: File) {
+export async function uploadImage(branchId: number, purpose: UploadPurpose, file: File) {
   if (!ALLOWED_TYPES.has(file.type)) throw new Error('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.')
   if (file.size === 0 || file.size > MAX_IMAGE_BYTES) throw new Error('Mỗi ảnh phải lớn hơn 0 và không quá 10 MB.')
 
@@ -31,6 +31,6 @@ export async function uploadImage(branchId: string, purpose: UploadPurpose, file
   return presign.objectPath
 }
 
-export const getImageUrl = (branchId: string, objectPath: string) =>
+export const getImageUrl = (branchId: number, objectPath: string) =>
   apiRequest<PresignedDownload>(`/api/v1/uploads/presign-read?${new URLSearchParams({ objectPath })}`, { branchId })
     .then((result) => result.downloadUrl)

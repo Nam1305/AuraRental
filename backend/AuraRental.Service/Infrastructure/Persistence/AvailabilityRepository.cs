@@ -9,7 +9,7 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvailabilityRepository
 {
     public async Task<IReadOnlyList<InventoryItem>> FindCandidates(
-        Guid branchId,
+        int branchId,
         string? query,
         string? size,
         int limit,
@@ -20,9 +20,11 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
             item.Variant.IsActive &&
             item.Variant.Product.IsActive);
 
+        var exactAssetCode = string.Empty;
         if (!string.IsNullOrWhiteSpace(query))
         {
             var normalizedQuery = query.Trim();
+            exactAssetCode = normalizedQuery;
             items = items.Where(item =>
                 EF.Functions.ILike(item.AssetCode, $"%{normalizedQuery}%") ||
                 EF.Functions.ILike(item.Variant.Product.Name, $"%{normalizedQuery}%") ||
@@ -46,7 +48,10 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
             .Include(item => item.OrderItems)
                 .ThenInclude(orderItem => orderItem.Order)
                     .ThenInclude(order => order.Reservation)
-            .OrderBy(item => item.Variant.Product.Name)
+            // A pasted asset code must never be pushed out of the result window by
+            // similarly named products or codes in a large catalogue.
+            .OrderByDescending(item => item.AssetCode == exactAssetCode)
+            .ThenBy(item => item.Variant.Product.Name)
             .ThenBy(item => item.Variant.Size)
             .ThenBy(item => item.AssetCode)
             .Take(limit)
@@ -54,8 +59,8 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
     }
 
     public async Task<bool> AreAvailable(
-        Guid branchId,
-        IReadOnlyCollection<Guid> inventoryItemIds,
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
         DateTimeOffset startAt,
         DateTimeOffset endAt,
         CancellationToken cancellationToken)
@@ -73,7 +78,7 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
     }
 
     public async Task<IReadOnlyList<InventoryOverviewDto>> GetInventorySummary(
-        Guid branchId,
+        int branchId,
         string? query,
         int limit,
         CancellationToken cancellationToken)
@@ -121,7 +126,7 @@ public sealed class AvailabilityRepository(AuraRentalDbContext context) : IAvail
     }
 
     private IQueryable<InventoryItem> AvailableQuery(
-        Guid branchId,
+        int branchId,
         DateTimeOffset startAt,
         DateTimeOffset endAt) =>
         context.InventoryItems.Where(item =>

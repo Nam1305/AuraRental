@@ -5,19 +5,19 @@ namespace AuraRental.Service.Interface.Persistence;
 public interface ICatalogRepository
 {
     Task<IReadOnlyList<Product>> SearchProducts(
-        Guid branchId,
+        int branchId,
         string? query,
         string? category,
         bool? active,
         int limit,
         CancellationToken cancellationToken);
 
-    Task<Product?> GetProduct(Guid branchId, Guid productId, CancellationToken cancellationToken);
-    Task<Product?> GetProductForUpdate(Guid branchId, Guid productId, CancellationToken cancellationToken);
-    Task<ProductVariant?> GetVariantForUpdate(Guid variantId, Guid branchId, CancellationToken cancellationToken);
-    Task<InventoryItem?> GetInventoryItemForUpdate(Guid inventoryItemId, Guid branchId, CancellationToken cancellationToken);
-    Task<bool> ProductCodeExists(Guid branchId, string code, CancellationToken cancellationToken);
-    Task<bool> VariantSizeExists(Guid productId, string size, CancellationToken cancellationToken);
+    Task<Product?> GetProduct(int branchId, int productId, CancellationToken cancellationToken);
+    Task<Product?> GetProductForUpdate(int branchId, int productId, CancellationToken cancellationToken);
+    Task<ProductVariant?> GetVariantForUpdate(int variantId, int branchId, CancellationToken cancellationToken);
+    Task<InventoryItem?> GetInventoryItemForUpdate(int inventoryItemId, int branchId, CancellationToken cancellationToken);
+    Task<bool> ProductCodeExists(int branchId, string code, CancellationToken cancellationToken);
+    Task<bool> VariantSizeExists(int productId, string size, CancellationToken cancellationToken);
     Task<bool> AssetCodeExists(IReadOnlyCollection<string> assetCodes, CancellationToken cancellationToken);
     void AddProduct(Product product);
     void AddVariant(ProductVariant variant);

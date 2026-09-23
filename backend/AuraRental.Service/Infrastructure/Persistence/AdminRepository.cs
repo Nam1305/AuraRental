@@ -10,13 +10,13 @@ public sealed class AdminRepository(AuraRentalDbContext context) : IAdminReposit
     public async Task<IReadOnlyList<Branch>> GetAllBranches(CancellationToken cancellationToken) =>
         await context.Branches.AsNoTracking().OrderBy(branch => branch.Code).ToListAsync(cancellationToken);
 
-    public Task<Branch?> GetBranchForUpdate(Guid branchId, CancellationToken cancellationToken) =>
+    public Task<Branch?> GetBranchForUpdate(int branchId, CancellationToken cancellationToken) =>
         context.Branches.FirstOrDefaultAsync(branch => branch.Id == branchId, cancellationToken);
 
     public Task<bool> BranchCodeExists(string code, CancellationToken cancellationToken) =>
         context.Branches.AnyAsync(branch => branch.Code == code, cancellationToken);
 
-    public async Task<bool> BranchHasActiveWork(Guid branchId, CancellationToken cancellationToken)
+    public async Task<bool> BranchHasActiveWork(int branchId, CancellationToken cancellationToken)
     {
         var hasReservation = await context.Reservations.AnyAsync(reservation =>
             reservation.BranchId == branchId &&
@@ -54,14 +54,14 @@ public sealed class AdminRepository(AuraRentalDbContext context) : IAdminReposit
         return await users.OrderBy(user => user.Name).Take(limit).ToListAsync(cancellationToken);
     }
 
-    public Task<User?> GetUserForUpdate(Guid userId, CancellationToken cancellationToken) =>
+    public Task<User?> GetUserForUpdate(int userId, CancellationToken cancellationToken) =>
         context.Users
             .Include(user => user.UserBranches)
                 .ThenInclude(access => access.Branch)
             .FirstOrDefaultAsync(user => user.Id == userId, cancellationToken);
 
     public async Task<IReadOnlyList<Branch>> GetBranchesByIds(
-        IReadOnlyCollection<Guid> branchIds,
+        IReadOnlyCollection<int> branchIds,
         CancellationToken cancellationToken) =>
         await context.Branches.Where(branch => branchIds.Contains(branch.Id) && branch.IsActive).ToListAsync(cancellationToken);
 

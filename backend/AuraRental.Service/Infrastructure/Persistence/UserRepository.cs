@@ -22,12 +22,12 @@ public sealed class UserRepository(AuraRentalDbContext context) : IUserRepositor
             cancellationToken);
     }
 
-    public Task<User?> GetById(Guid userId, CancellationToken cancellationToken) =>
+    public Task<User?> GetById(int userId, CancellationToken cancellationToken) =>
         context.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(user => user.Id == userId && user.IsActive, cancellationToken);
 
-    public Task<bool> HasBranchAccess(Guid userId, Guid branchId, CancellationToken cancellationToken) =>
+    public Task<bool> HasBranchAccess(int userId, int branchId, CancellationToken cancellationToken) =>
         context.Branches.AnyAsync(branch =>
             branch.Id == branchId &&
             branch.IsActive &&
@@ -35,7 +35,7 @@ public sealed class UserRepository(AuraRentalDbContext context) : IUserRepositor
              context.Users.Any(user => user.Id == userId && user.IsActive && user.Role == AuraRental.Domain.Enums.UserRole.Manager)),
             cancellationToken);
 
-    public async Task<IReadOnlyList<Branch>> GetBranches(Guid userId, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<Branch>> GetBranches(int userId, CancellationToken cancellationToken) =>
         await context.UserBranches
             .AsNoTracking()
             .Where(item => item.UserId == userId && item.Branch.IsActive)

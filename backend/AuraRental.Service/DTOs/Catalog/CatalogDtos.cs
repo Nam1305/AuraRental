@@ -3,7 +3,7 @@ namespace AuraRental.Service.DTOs.Catalog;
 public sealed record RentalPriceDto(string PackageCode, string Label, decimal Price);
 
 public sealed record ProductListItemDto(
-    Guid Id,
+    int Id,
     string Code,
     string Name,
     string Category,
@@ -18,7 +18,7 @@ public sealed record ProductListItemDto(
 public sealed record InventorySummaryDto(int Total, int Usable, int Maintenance, int Lost, int Retired);
 
 public sealed record ProductVariantDto(
-    Guid Id,
+    int Id,
     string Size,
     string? Measurements,
     decimal ReplacementValue,
@@ -27,7 +27,7 @@ public sealed record ProductVariantDto(
     IReadOnlyList<InventoryItemDto> InventoryItems);
 
 public sealed record ProductDetailDto(
-    Guid Id,
+    int Id,
     string Code,
     string Name,
     string Category,
@@ -69,11 +69,11 @@ public sealed record UpdateProductRequest(
 
 public sealed record ReplaceRentalPricesRequest(IReadOnlyList<RentalPriceInput> Prices);
 public sealed record RentalPriceSetDto(
-    Guid VariantId,
-    Guid BranchId,
+    int VariantId,
+    int BranchId,
     IReadOnlyList<RentalPriceDto> Prices,
     bool EffectiveForNewReservationsOnly);
 
 public sealed record AddInventoryItemsRequest(IReadOnlyList<InventoryItemInput> Items);
-public sealed record InventoryItemDto(Guid Id, string AssetCode, string Status);
+public sealed record InventoryItemDto(int Id, string AssetCode, string Status);
 public sealed record UpdateInventoryItemRequest(string Status);

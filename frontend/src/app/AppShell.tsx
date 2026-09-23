@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {user && user.branches.length > 1 ? (
             <label className="branch-select">
               <span>Chi nhánh</span>
-              <select value={activeBranchId ?? ''} onChange={(event) => selectBranch(event.target.value)}>
+              <select value={activeBranchId ?? ''} onChange={(event) => selectBranch(Number(event.target.value))}>
                 {user.branches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name}</option>)}
               </select>
             </label>

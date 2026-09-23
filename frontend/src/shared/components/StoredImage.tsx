@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getImageUrl } from '@/shared/api/uploads.api'
 
-export function StoredImage({ branchId, objectPath, alt, className }: { branchId: string; objectPath: string; alt: string; className?: string }) {
+export function StoredImage({ branchId, objectPath, alt, className }: { branchId: number; objectPath: string; alt: string; className?: string }) {
   const [url, setUrl] = useState<string | null>(objectPath.startsWith('http://') || objectPath.startsWith('https://') ? objectPath : null)
 
   useEffect(() => {

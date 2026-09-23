@@ -6,12 +6,12 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 
 public sealed class QuoteRepository(AuraRentalDbContext context) : IQuoteRepository
 {
-    public Task<bool> CustomerExists(Guid customerId, CancellationToken cancellationToken) =>
+    public Task<bool> CustomerExists(int customerId, CancellationToken cancellationToken) =>
         context.Customers.AnyAsync(customer => customer.Id == customerId, cancellationToken);
 
     public async Task<IReadOnlyList<InventoryItem>> GetInventoryItems(
-        Guid branchId,
-        IReadOnlyCollection<Guid> inventoryItemIds,
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
         CancellationToken cancellationToken) =>
         await context.InventoryItems
             .AsNoTracking()

@@ -1,8 +1,8 @@
 export type OrderListItem = {
-  id: string
+  id: number
   orderNo: string
   status: string
-  customerId: string
+  customerId: number
   customerName: string
   phoneMasked: string
   itemSummary: string
@@ -15,8 +15,8 @@ export type OrderListItem = {
 }
 
 export type OrderItem = {
-  orderItemId: string
-  inventoryItemId: string
+  orderItemId: number
+  inventoryItemId: number
   productName: string
   size: string
   assetCode: string
@@ -29,14 +29,14 @@ export type OrderItem = {
 }
 
 export type OrderDetail = {
-  id: string
-  reservationId: string
+  id: number
+  reservationId: number
   orderNo: string
   status: string
-  branchId: string
+  branchId: number
   branchCode: string
   branchName: string
-  customer: { id: string; nameSnapshot: string; phoneSnapshot: string; deliveryAddressSnapshot: string }
+  customer: { id: number; nameSnapshot: string; phoneSnapshot: string; deliveryAddressSnapshot: string }
   rentalStartAt: string
   rentalEndAt: string
   items: OrderItem[]
@@ -46,6 +46,6 @@ export type OrderDetail = {
   identityVerification: { required: boolean; verified: boolean; verifiedBy: string | null; verifiedAt: string | null }
   delivery: { status: string; trackingCode: string | null; completedAt: string | null }
   returnDelivery: { status: string; trackingCode: string | null; completedAt: string | null }
-  payments: Array<{ id: string; type: string; amount: number; method: string; status: string; transactionRef: string | null; paidAt: string | null }>
+  payments: Array<{ id: number; type: string; amount: number; method: string; status: string; transactionRef: string | null; paidAt: string | null }>
   allowedActions: string[]
 }

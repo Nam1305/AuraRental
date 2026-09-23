@@ -8,7 +8,15 @@ Sau khi chạy `schema.sql`, nạp bộ dữ liệu test bằng:
 docker exec -i postgres-db-1 psql -v ON_ERROR_STOP=1 -U postgres -d aura_rental < database/seed.sql
 ```
 
-`seed.sql` dùng UUID cố định và UPSERT nên có thể chạy lại mà không nhân bản dữ liệu. File không xóa dữ liệu được tạo thủ công. Bộ seed gồm hai chi nhánh, ba tài khoản, catalog và giá `1D/2D/3D` theo từng chi nhánh, cùng reservation/order/refund ở nhiều trạng thái.
+`seed.sql` dùng ID số cố định và UPSERT nên có thể chạy lại mà không nhân bản dữ liệu. File không xóa dữ liệu được tạo thủ công. Bộ seed gồm hai chi nhánh, ba tài khoản, catalog và giá `1D/2D/3D` theo từng chi nhánh, cùng reservation/order/refund ở nhiều trạng thái.
+
+## Áp dụng migration cho database đang có
+
+Backend không tự chạy migration. Với môi trường Docker local, chạy từng file migration bằng tài khoản owner của database, ví dụ:
+
+```bash
+docker exec -i postgres-db-1 psql -v ON_ERROR_STOP=1 -U postgres -d aura_rental < database/migrations/005_reservation_customer_after_form.sql
+```
 
 Bộ dữ liệu hiện có 16 mã đồ vật lý, 11 lượt giữ chỗ, 8 đơn hàng và 2 phiếu hoàn. Các case Hà Nội bao phủ giữ chỗ cọc slot, đơn thiếu cọc, chờ xác minh CCCD, đã xác nhận, đang chuẩn bị, đang thuê và đang kiểm đồ; trong hàng đợi trả có cả đơn chưa inspection và đơn đã gửi manager duyệt. Sài Gòn có giữ chỗ đang hoạt động và đơn đã hoàn tất để kiểm tra phân quyền/dữ liệu theo chi nhánh.
 
@@ -33,7 +41,7 @@ Có **15 bảng dữ liệu nghiệp vụ** cho multi-branch và một bảng k�
 - Mỗi lần duyệt/điều chỉnh là một dòng `refunds`. Chi tiết đã chốt lưu trong `items_snapshot`; ảnh PNG tạo từ dữ liệu này, không cần bảng ảnh hoàn tiền.
 - OTP nằm trong reservation; thông tin giao/nhận và checklist CCCD nằm trong order. MVP không lưu lịch sử cấp lại OTP, nhiều chuyến giao/nhận hoặc trả đồ/hoàn từng phần.
 
-`id` là khóa nội bộ; các cột `..._id` liên kết bảng. UUID dùng cho ID, numeric cho tiền, timestamptz cho thời gian. Các trường có thể trống trong SQL là thông tin tùy chọn/chưa thực hiện.
+`id` là khóa nội bộ integer tự tăng; các cột `..._id` liên kết bảng. `numeric` dùng cho tiền, `timestamptz` dùng cho thời gian. Các trường có thể trống trong SQL là thông tin tùy chọn/chưa thực hiện.
 
 ## 2. Các bảng và thuộc tính
 
@@ -164,7 +172,7 @@ Staff `DRAFT → SUBMITTED → manager APPROVED`; manager được `DRAFT → AP
 
 Chỉ CONFIRMED tính vào tiền thực nhận/chi. Tổng cọc = confirmed SLOT_DEPOSIT + TARGET_DEPOSIT; không tính ADDITIONAL_COLLECTION vào cọc. Approval không tạo tiền ra: chỉ sau xác nhận chuyển khoản mới ghi/xác nhận payment REFUND gắn đúng phiếu.
 
-Backend chặn chi hai lần theo order, sai số tiền hoặc gắn refund của đơn khác, chống request lặp (có thể dùng UUID payment ổn định làm khóa request). Không sửa/xóa khoản confirmed theo thao tác thông thường; điều chỉnh sai sót tài chính là xử lý ngoại lệ của manager, chưa xây module đảo giao dịch/audit ở baseline này.
+Backend chặn chi hai lần theo order, sai số tiền hoặc gắn refund của đơn khác, chống request lặp bằng idempotency key số ổn định. Không sửa/xóa khoản confirmed theo thao tác thông thường; điều chỉnh sai sót tài chính là xử lý ngoại lệ của manager, chưa xây module đảo giao dịch/audit ở baseline này.
 
 ## 3. Quan hệ chính
 

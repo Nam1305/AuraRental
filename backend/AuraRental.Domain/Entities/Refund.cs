@@ -5,8 +5,8 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class Refund
 {
-    public Guid Id { get; set; }
-    public Guid OrderId { get; set; }
+    public int Id { get; set; }
+    public int OrderId { get; set; }
     public int Version { get; set; } = 1;
     public RefundStatus Status { get; set; } = RefundStatus.Draft;
     public decimal DepositAmount { get; set; }
@@ -15,9 +15,9 @@ public sealed class Refund
     public decimal RefundAmount { get; set; }
     public JsonDocument ItemsSnapshot { get; set; } = null!;
     public string? AdjustmentReason { get; set; }
-    public Guid CreatedBy { get; set; }
-    public Guid? SubmittedBy { get; set; }
-    public Guid? ApprovedBy { get; set; }
+    public int CreatedBy { get; set; }
+    public int? SubmittedBy { get; set; }
+    public int? ApprovedBy { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public Order Order { get; set; } = null!;

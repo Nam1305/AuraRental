@@ -29,15 +29,15 @@ export function getStoredBranchId() {
   return localStorage.getItem(ACTIVE_BRANCH_KEY)
 }
 
-export function setStoredBranchId(branchId: string) {
-  localStorage.setItem(ACTIVE_BRANCH_KEY, branchId)
+export function setStoredBranchId(branchId: number) {
+  localStorage.setItem(ACTIVE_BRANCH_KEY, String(branchId))
 }
 
 export function idempotencyHeaders() {
-  return { 'Idempotency-Key': crypto.randomUUID() }
+  return { 'Idempotency-Key': String(Math.floor(Math.random() * 2_000_000_000) + 1) }
 }
 
-type RequestOptions = RequestInit & { branchId?: string | null }
+type RequestOptions = RequestInit & { branchId?: number | null }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers)
@@ -46,7 +46,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const token = getAccessToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (options.branchId) headers.set('X-Branch-Id', options.branchId)
+  if (options.branchId) headers.set('X-Branch-Id', String(options.branchId))
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
   if (!response.ok) {

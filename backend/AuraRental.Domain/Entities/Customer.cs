@@ -2,7 +2,7 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class Customer
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string Phone { get; set; } = null!;
     public string? InstagramHandle { get; set; }

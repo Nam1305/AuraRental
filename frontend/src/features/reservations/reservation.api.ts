@@ -7,16 +7,16 @@ import type {
   ReservationListItem,
 } from './reservation.types'
 
-export function searchReservations(branchId: string, status: string, query: string) {
+export function searchReservations(branchId: number, status: string, query: string) {
   const search = new URLSearchParams({ status, query, limit: '50' })
   return apiRequest<ReservationListItem[]>(`/api/v1/reservations?${search}`, { branchId })
 }
 
-export const getReservation = (branchId: string, reservationId: string) =>
+export const getReservation = (branchId: number, reservationId: number) =>
   apiRequest<ReservationDetail>(`/api/v1/reservations/${reservationId}`, { branchId })
 
 export function createQuote(
-  branchId: string,
+  branchId: number,
   input: Omit<CreateReservationInput, 'receivedPayment'>,
 ) {
   return apiRequest<Quote>('/api/v1/quotes', {
@@ -30,7 +30,7 @@ export function createQuote(
   })
 }
 
-export function createReservation(branchId: string, input: CreateReservationInput) {
+export function createReservation(branchId: number, input: CreateReservationInput) {
   return apiRequest<ReservationDetail>('/api/v1/reservations', {
     method: 'POST',
     branchId,
@@ -43,7 +43,7 @@ export function createReservation(branchId: string, input: CreateReservationInpu
   })
 }
 
-export const reissueOtp = (branchId: string, reservationId: string, reason: string) =>
+export const reissueOtp = (branchId: number, reservationId: number, reason: string) =>
   apiRequest<{ formUrl: string; otp: string; expiresAt: string }>(
     `/api/v1/reservations/${reservationId}/otp/reissue`,
     {
@@ -54,7 +54,7 @@ export const reissueOtp = (branchId: string, reservationId: string, reason: stri
     },
   )
 
-export const cancelReservation = (branchId: string, reservationId: string, reason: string) =>
+export const cancelReservation = (branchId: number, reservationId: number, reason: string) =>
   apiRequest(`/api/v1/reservations/${reservationId}/cancel`, {
     method: 'POST',
     branchId,
@@ -63,8 +63,8 @@ export const cancelReservation = (branchId: string, reservationId: string, reaso
   })
 
 export const recordReservationPayment = (
-  branchId: string,
-  reservationId: string,
+  branchId: number,
+  reservationId: number,
   type: 'TARGET_DEPOSIT' | 'ADDITIONAL_COLLECTION',
   amount: number,
   method = 'BANK_TRANSFER',

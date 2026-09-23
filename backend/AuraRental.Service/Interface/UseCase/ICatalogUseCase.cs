@@ -11,11 +11,11 @@ public interface ICatalogUseCase
         int limit,
         CancellationToken cancellationToken);
 
-    Task<ProductDetailDto> GetProduct(Guid productId, CancellationToken cancellationToken);
+    Task<ProductDetailDto> GetProduct(int productId, CancellationToken cancellationToken);
     Task<ProductDetailDto> CreateProduct(CreateProductRequest request, CancellationToken cancellationToken);
-    Task<ProductDetailDto> UpdateProduct(Guid productId, UpdateProductRequest request, CancellationToken cancellationToken);
-    Task<ProductVariantDto> AddVariant(Guid productId, CreateProductVariantInput request, CancellationToken cancellationToken);
-    Task<RentalPriceSetDto> ReplaceRentalPrices(Guid variantId, ReplaceRentalPricesRequest request, CancellationToken cancellationToken);
-    Task<IReadOnlyList<InventoryItemDto>> AddInventoryItems(Guid variantId, AddInventoryItemsRequest request, CancellationToken cancellationToken);
-    Task<InventoryItemDto> UpdateInventoryItem(Guid inventoryItemId, UpdateInventoryItemRequest request, CancellationToken cancellationToken);
+    Task<ProductDetailDto> UpdateProduct(int productId, UpdateProductRequest request, CancellationToken cancellationToken);
+    Task<ProductVariantDto> AddVariant(int productId, CreateProductVariantInput request, CancellationToken cancellationToken);
+    Task<RentalPriceSetDto> ReplaceRentalPrices(int variantId, ReplaceRentalPricesRequest request, CancellationToken cancellationToken);
+    Task<IReadOnlyList<InventoryItemDto>> AddInventoryItems(int variantId, AddInventoryItemsRequest request, CancellationToken cancellationToken);
+    Task<InventoryItemDto> UpdateInventoryItem(int inventoryItemId, UpdateInventoryItemRequest request, CancellationToken cancellationToken);
 }

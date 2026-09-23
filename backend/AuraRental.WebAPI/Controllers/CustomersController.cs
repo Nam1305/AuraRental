@@ -17,9 +17,9 @@ public sealed class CustomersController(ICustomerUseCase customerUseCase) : ApiC
         CancellationToken cancellationToken = default) =>
         ResponseData(await customerUseCase.Search(query, limit, cancellationToken));
 
-    [HttpGet("{customerId:guid}")]
+    [HttpGet("{customerId:int}")]
     public async Task<ActionResult<ApiResponse<CustomerDto>>> Get(
-        Guid customerId,
+        int customerId,
         CancellationToken cancellationToken) =>
         ResponseData(await customerUseCase.Get(customerId, cancellationToken));
 
@@ -33,17 +33,17 @@ public sealed class CustomersController(ICustomerUseCase customerUseCase) : ApiC
         return CreatedAtAction(nameof(Get), new { customerId = customer.Id }, ResponseData(customer));
     }
 
-    [HttpPatch("{customerId:guid}")]
+    [HttpPatch("{customerId:int}")]
     [AuraRental.WebAPI.Security.Idempotent]
     public async Task<ActionResult<ApiResponse<CustomerDto>>> Update(
-        Guid customerId,
+        int customerId,
         [FromBody] UpdateCustomerRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await customerUseCase.Update(customerId, request, cancellationToken));
 
-    [HttpGet("{customerId:guid}/orders")]
+    [HttpGet("{customerId:int}/orders")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<CustomerOrderHistoryDto>>>> GetOrders(
-        Guid customerId,
+        int customerId,
         [FromQuery] string? status,
         [FromQuery] int limit = 20,
         CancellationToken cancellationToken = default) =>

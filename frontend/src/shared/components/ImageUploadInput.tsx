@@ -6,7 +6,7 @@ const splitPaths = (value: string) => value.split('\n').map((path) => path.trim(
 export function ImageUploadInput({
   branchId, purpose, value, onChange, multiple = true,
 }: {
-  branchId: string
+  branchId: number
   purpose: 'PRODUCT_IMAGE' | 'DAMAGE_EVIDENCE'
   value: string
   onChange: (value: string) => void

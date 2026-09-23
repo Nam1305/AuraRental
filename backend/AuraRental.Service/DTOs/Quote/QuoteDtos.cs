@@ -1,16 +1,15 @@
 namespace AuraRental.Service.DTOs.Quote;
 
-public sealed record QuoteItemRequest(Guid InventoryItemId, string PackageCode);
+public sealed record QuoteItemRequest(int InventoryItemId, string PackageCode);
 
 public sealed record CreateQuoteRequest(
-    Guid CustomerId,
     DateTimeOffset RentalStartAt,
     DateTimeOffset RentalEndAt,
     string DepositPlan,
     IReadOnlyList<QuoteItemRequest> Items);
 
 public sealed record QuoteItemDto(
-    Guid InventoryItemId,
+    int InventoryItemId,
     string AssetCode,
     string ProductName,
     string Size,
@@ -19,7 +18,7 @@ public sealed record QuoteItemDto(
     decimal ReplacementValue);
 
 public sealed record QuoteDto(
-    Guid BranchId,
+    int BranchId,
     string Currency,
     IReadOnlyList<QuoteItemDto> Items,
     decimal RentalFee,

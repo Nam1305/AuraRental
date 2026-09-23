@@ -2,9 +2,9 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class ReservationItem
 {
-    public Guid Id { get; set; }
-    public Guid ReservationId { get; set; }
-    public Guid InventoryItemId { get; set; }
+    public int Id { get; set; }
+    public int ReservationId { get; set; }
+    public int InventoryItemId { get; set; }
     public string PackageCode { get; set; } = null!;
     public decimal ReplacementValue { get; set; }
     public decimal RentalPrice { get; set; }

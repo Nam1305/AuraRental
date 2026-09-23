@@ -8,49 +8,49 @@ import type {
   VariantInput,
 } from './catalog.types'
 
-export function getProducts(branchId: string, query: string, active: string) {
+export function getProducts(branchId: number, query: string, active: string) {
   const search = new URLSearchParams({ query, limit: '50' })
   if (active) search.set('active', active)
   return apiRequest<ProductListItem[]>(`/api/v1/products?${search}`, { branchId })
 }
 
-export const getProduct = (branchId: string, productId: string) =>
+export const getProduct = (branchId: number, productId: number) =>
   apiRequest<ProductDetail>(`/api/v1/products/${productId}`, { branchId })
 
-export const createProduct = (branchId: string, input: CreateProductInput) =>
+export const createProduct = (branchId: number, input: CreateProductInput) =>
   apiRequest<ProductDetail>('/api/v1/products', {
     method: 'POST', branchId, headers: idempotencyHeaders(), body: JSON.stringify(input),
   })
 
-export const updateProduct = (branchId: string, productId: string, input: UpdateProductInput) =>
+export const updateProduct = (branchId: number, productId: number, input: UpdateProductInput) =>
   apiRequest<ProductDetail>(`/api/v1/products/${productId}`, {
     method: 'PATCH', branchId, headers: idempotencyHeaders(), body: JSON.stringify(input),
   })
 
-export const addVariant = (branchId: string, productId: string, input: VariantInput) =>
+export const addVariant = (branchId: number, productId: number, input: VariantInput) =>
   apiRequest(`/api/v1/products/${productId}/variants`, {
     method: 'POST', branchId, headers: idempotencyHeaders(), body: JSON.stringify(input),
   })
 
 export const replacePrices = (
-  branchId: string,
-  variantId: string,
+  branchId: number,
+  variantId: number,
   prices: Array<{ packageCode: string; price: number }>,
 ) => apiRequest(`/api/v1/product-variants/${variantId}/rental-prices`, {
   method: 'PUT', branchId, headers: idempotencyHeaders(), body: JSON.stringify({ prices }),
 })
 
 export const addInventoryItems = (
-  branchId: string,
-  variantId: string,
+  branchId: number,
+  variantId: number,
   items: Array<{ assetCode: string }>,
 ) => apiRequest<InventoryItem[]>(`/api/v1/product-variants/${variantId}/inventory-items`, {
   method: 'POST', branchId, headers: idempotencyHeaders(), body: JSON.stringify({ items }),
 })
 
 export const updateInventoryItem = (
-  branchId: string,
-  inventoryItemId: string,
+  branchId: number,
+  inventoryItemId: number,
   status: InventoryItem['status'],
 ) => apiRequest<InventoryItem>(`/api/v1/inventory-items/${inventoryItemId}`, {
   method: 'PATCH', branchId, headers: idempotencyHeaders(),

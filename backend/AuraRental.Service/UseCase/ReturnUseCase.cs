@@ -68,8 +68,8 @@ public sealed class ReturnUseCase(
     }
 
     public async Task<InspectionDto> InspectItem(
-        Guid orderId,
-        Guid orderItemId,
+        int orderId,
+        int orderItemId,
         InspectOrderItemRequest request,
         CancellationToken cancellationToken)
     {
@@ -122,7 +122,7 @@ public sealed class ReturnUseCase(
     }
 
     public async Task<RefundDto> CreateOrUpdateRefund(
-        Guid orderId,
+        int orderId,
         CreateRefundRequest request,
         CancellationToken cancellationToken)
     {
@@ -142,7 +142,6 @@ public sealed class ReturnUseCase(
         {
             refund = new Refund
             {
-                Id = Guid.NewGuid(),
                 OrderId = order.Id,
                 Version = await returnRepository.GetLatestVersion(order.Id, cancellationToken) + 1,
                 Status = RefundStatus.Draft,
@@ -163,7 +162,7 @@ public sealed class ReturnUseCase(
         return ToRefundDto(refund);
     }
 
-    public Task<RefundDto> SubmitRefund(Guid refundId, CancellationToken cancellationToken) =>
+    public Task<RefundDto> SubmitRefund(int refundId, CancellationToken cancellationToken) =>
         ChangeRefundStatus(
             refundId,
             RefundStatus.Draft,
@@ -175,7 +174,7 @@ public sealed class ReturnUseCase(
             cancellationToken);
 
     public async Task<RefundDto> ReturnForReview(
-        Guid refundId,
+        int refundId,
         ReturnForReviewRequest request,
         CancellationToken cancellationToken)
     {
@@ -197,7 +196,7 @@ public sealed class ReturnUseCase(
     }
 
     public async Task<ApproveRefundDto> Approve(
-        Guid refundId,
+        int refundId,
         ApproveRefundRequest request,
         CancellationToken cancellationToken)
     {
@@ -243,7 +242,7 @@ public sealed class ReturnUseCase(
     }
 
     public async Task<RefundDto> CreateRevision(
-        Guid refundId,
+        int refundId,
         CreateRefundRevisionRequest request,
         CancellationToken cancellationToken)
     {
@@ -270,7 +269,6 @@ public sealed class ReturnUseCase(
 
         var revision = new Refund
         {
-            Id = Guid.NewGuid(),
             OrderId = approved.OrderId,
             Version = await returnRepository.GetLatestVersion(approved.OrderId, cancellationToken) + 1,
             Status = RefundStatus.Draft,
@@ -290,7 +288,7 @@ public sealed class ReturnUseCase(
     }
 
     public async Task<SettleRefundDto> Settle(
-        Guid refundId,
+        int refundId,
         SettleRefundRequest request,
         CancellationToken cancellationToken)
     {
@@ -332,7 +330,6 @@ public sealed class ReturnUseCase(
 
             payment = new Payment
             {
-                Id = Guid.NewGuid(),
                 ReservationId = refund.Order.ReservationId,
                 RefundId = refund.Id,
                 Type = PaymentType.Refund,
@@ -382,8 +379,39 @@ public sealed class ReturnUseCase(
                 ApiText.EnumValue(item.InventoryItem.Status))).ToList());
     }
 
+    public async Task<RefundReceiptDto> GetReceipt(int refundId, CancellationToken cancellationToken)
+    {
+        var refund = await GetRefundRequired(refundId, false, cancellationToken);
+        if (refund.Status != RefundStatus.Approved)
+        {
+            throw new ConflictException("REFUND_RECEIPT_NOT_READY", "Ảnh tổng kết chỉ có sau khi phiếu hoàn đã được duyệt.");
+        }
+
+        var snapshot = JsonSerializer.Deserialize<List<RefundSnapshotItemDto>>(refund.ItemsSnapshot.RootElement.GetRawText()) ?? [];
+        var settled = refund.Order.SettledAt.HasValue;
+        return new RefundReceiptDto(
+            refund.Id,
+            refund.OrderId,
+            refund.Order.OrderNo,
+            refund.Order.Branch.Name,
+            refund.Order.CustomerName,
+            settled ? "SETTLED" : "APPROVED",
+            refund.Order.SettledAt ?? refund.ApprovedAt ?? refund.CreatedAt,
+            refund.DepositAmount,
+            refund.RentalFee,
+            refund.ProcessingFee,
+            refund.RefundAmount,
+            AdditionalCollection(refund),
+            snapshot.Select(item => new RefundReceiptItemDto(
+                item.ProductName,
+                item.Size,
+                item.AssetCode,
+                item.PackageCode,
+                item.ActualRentalFee)).ToList());
+    }
+
     private async Task<RefundDto> ChangeRefundStatus(
-        Guid refundId,
+        int refundId,
         RefundStatus requiredStatus,
         Action<Refund> change,
         CancellationToken cancellationToken)
@@ -404,11 +432,11 @@ public sealed class ReturnUseCase(
         return ToRefundDto(refund);
     }
 
-    private async Task<Order> GetOrderRequired(Guid orderId, bool tracking, CancellationToken cancellationToken) =>
+    private async Task<Order> GetOrderRequired(int orderId, bool tracking, CancellationToken cancellationToken) =>
         await rentalRepository.GetOrder(orderId, requestContext.BranchId, tracking, cancellationToken)
             ?? throw new NotFoundException("ORDER_NOT_FOUND", "Không tìm thấy order tại chi nhánh này.");
 
-    private async Task<Refund> GetRefundRequired(Guid refundId, bool tracking, CancellationToken cancellationToken) =>
+    private async Task<Refund> GetRefundRequired(int refundId, bool tracking, CancellationToken cancellationToken) =>
         await returnRepository.GetRefund(refundId, requestContext.BranchId, tracking, cancellationToken)
             ?? throw new NotFoundException("REFUND_NOT_FOUND", "Không tìm thấy phiếu đối soát tại chi nhánh này.");
 
@@ -478,6 +506,7 @@ public sealed class ReturnUseCase(
         item.ProductName,
         item.Size,
         item.AssetCode,
+        item.PackageCode,
         item.Condition.HasValue ? ApiText.EnumValue(item.Condition.Value) : string.Empty,
         item.ActualRentalFee ?? 0,
         item.ProcessingFee,

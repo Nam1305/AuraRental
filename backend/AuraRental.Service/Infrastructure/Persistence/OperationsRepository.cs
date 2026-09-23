@@ -8,11 +8,11 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 
 public sealed class OperationsRepository(AuraRentalDbContext context) : IOperationsRepository
 {
-    public Task<Branch?> GetBranch(Guid branchId, CancellationToken cancellationToken) =>
+    public Task<Branch?> GetBranch(int branchId, CancellationToken cancellationToken) =>
         context.Branches.AsNoTracking().FirstOrDefaultAsync(branch => branch.Id == branchId, cancellationToken);
 
     public async Task<DashboardCounts> GetDashboardCounts(
-        Guid branchId,
+        int branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
         CancellationToken cancellationToken)
@@ -37,7 +37,7 @@ public sealed class OperationsRepository(AuraRentalDbContext context) : IOperati
     }
 
     public async Task<IReadOnlyList<DashboardTaskDto>> GetDashboardTasks(
-        Guid branchId,
+        int branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
         CancellationToken cancellationToken)
@@ -139,7 +139,7 @@ public sealed class OperationsRepository(AuraRentalDbContext context) : IOperati
     }
 
     private async Task<decimal> MoneyByType(
-        Guid branchId,
+        int branchId,
         PaymentType type,
         DateTimeOffset fromUtc,
         DateTimeOffset toExclusiveUtc,

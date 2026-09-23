@@ -5,6 +5,7 @@ import { formatMoney } from '@/shared/format/money'
 import { formatDateTime } from '@/shared/format/date'
 import { statusLabel } from '@/shared/format/status'
 import { useSession } from '@/features/session/SessionProvider'
+import { MoneyDialog } from '@/shared/components/MoneyInput'
 import { recordReservationPayment } from '@/features/reservations/reservation.api'
 import {
   cancelOrder,
@@ -22,7 +23,7 @@ export function OrdersPage() {
   const { activeBranchId } = useSession()
   const [status, setStatus] = useState('PENDING_DEPOSIT,PENDING_VERIFICATION,CONFIRMED,PREPARING,RENTING,INSPECTING')
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const orders = useApiQuery(
     () => activeBranchId ? searchOrders(activeBranchId, status, query) : Promise.resolve([]),
     [activeBranchId, status, query],
@@ -71,10 +72,11 @@ export function OrdersPage() {
   )
 }
 
-function OrderDetailPanel({ branchId, orderId, onChanged }: { branchId: string; orderId: string; onChanged: () => void }) {
+function OrderDetailPanel({ branchId, orderId, onChanged }: { branchId: number; orderId: number; onChanged: () => void }) {
   const [version, setVersion] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<Error | null>(null)
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false)
   const detail = useApiQuery(() => getOrder(branchId, orderId), [branchId, orderId, version])
   const order = detail.data
 
@@ -90,7 +92,7 @@ function OrderDetailPanel({ branchId, orderId, onChanged }: { branchId: string; 
     <div className="progress-strip"><span className={order.delivery.status !== 'NOT_STARTED' ? 'done' : ''}>Giao đi</span><span className={order.status === 'RENTING' || order.status === 'INSPECTING' || order.status === 'COMPLETED' ? 'done' : ''}>Đang thuê</span><span className={order.returnDelivery.status !== 'NOT_STARTED' ? 'done' : ''}>Nhận trả</span><span className={order.status === 'COMPLETED' ? 'done' : ''}>Đối soát</span></div>
     {message && <div className="success-note">{message}</div>}{actionError && <div className="inline-error">{actionError.message}</div>}
     <section className="order-action-box"><span className="eyebrow">Việc cần làm</span><div className="action-buttons order-actions">
-      {order.allowedActions.includes('RECORD_TARGET_DEPOSIT') && <button className="button button--primary" onClick={() => { const amount = Number(window.prompt('Số tiền vừa nhận', String(order.depositRemaining))); if (amount > 0) void run(() => recordReservationPayment(branchId, order.reservationId, 'TARGET_DEPOSIT', amount), 'Đã ghi nhận cọc.') }}>Nhận thêm cọc</button>}
+      {order.allowedActions.includes('RECORD_TARGET_DEPOSIT') && <button className="button button--primary" onClick={() => setDepositDialogOpen(true)}>Nhận thêm cọc</button>}
       {order.allowedActions.includes('VERIFY_IDENTITY') && <button className="button" onClick={() => window.confirm('Đã đối chiếu CCCD với khách?') && void run(() => verifyIdentity(branchId, order.id), 'Đã xác minh CCCD.')}>Xác minh CCCD</button>}
       {order.allowedActions.includes('PREPARE') && <button className="button button--primary" onClick={() => void run(() => prepareOrder(branchId, order.id), 'Đã chuyển sang chuẩn bị đồ.')}>Bắt đầu chuẩn bị</button>}
       {order.allowedActions.includes('START_DELIVERY') && order.delivery.status === 'NOT_STARTED' && <button className="button button--primary" onClick={() => { const tracking = window.prompt('Mã vận đơn giao đi (có thể bỏ trống)'); if (tracking !== null) void run(() => startDelivery(branchId, order.id, tracking.trim() || null), 'Đã bắt đầu giao đồ.') }}>Bắt đầu giao</button>}
@@ -104,5 +106,6 @@ function OrderDetailPanel({ branchId, orderId, onChanged }: { branchId: string; 
     <h3 className="detail-section-title">Sản phẩm trong đơn</h3>
     <div className="line-items">{order.items.map((item) => <div key={item.orderItemId}><span>{item.productName} · {item.size}<small>{item.assetCode} · {item.packageCode}{item.condition ? ` · ${statusLabel(item.condition)}` : ''}</small></span><strong>{formatMoney(item.rentalPrice)}</strong></div>)}</div>
     {order.payments.length > 0 && <details className="details-block"><summary>Giao dịch ({order.payments.length})</summary>{order.payments.map((payment) => <div key={payment.id}><span>{statusLabel(payment.type)} · {payment.method}</span><strong>{formatMoney(payment.amount)}</strong></div>)}</details>}
+    {depositDialogOpen && <MoneyDialog title="Ghi nhận cọc vừa nhận" initialAmount={order.depositRemaining} confirmLabel="Xác nhận ghi nhận" onClose={() => setDepositDialogOpen(false)} onConfirm={(amount) => { setDepositDialogOpen(false); void run(() => recordReservationPayment(branchId, order.reservationId, 'TARGET_DEPOSIT', amount), 'Đã ghi nhận cọc.') }} />}
   </aside>}</AsyncState>
 }

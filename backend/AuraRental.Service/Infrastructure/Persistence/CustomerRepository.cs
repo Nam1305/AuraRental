@@ -31,7 +31,7 @@ public sealed class CustomerRepository(AuraRentalDbContext context) : ICustomerR
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Customer?> Get(Guid customerId, CancellationToken cancellationToken) =>
+    public Task<Customer?> Get(int customerId, CancellationToken cancellationToken) =>
         context.Customers.FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
 
     public Task<Customer?> GetByPhone(string normalizedPhone, CancellationToken cancellationToken) =>
@@ -44,8 +44,8 @@ public sealed class CustomerRepository(AuraRentalDbContext context) : ICustomerR
         _ = await context.SaveChangesAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Order>> GetOrderHistory(
-        Guid customerId,
-        Guid userId,
+        int customerId,
+        int userId,
         string? status,
         int limit,
         CancellationToken cancellationToken)

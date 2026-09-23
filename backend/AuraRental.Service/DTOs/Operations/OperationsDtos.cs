@@ -8,14 +8,14 @@ public sealed record DashboardCountersDto(
 
 public sealed record DashboardTaskDto(
     string Type,
-    Guid ReferenceId,
+    int ReferenceId,
     string CustomerName,
     string Label,
     DateTimeOffset? At);
 
 public sealed record DashboardDto(
     DateOnly Date,
-    Guid BranchId,
+    int BranchId,
     string BranchCode,
     string BranchName,
     DashboardCountersDto Counters,
@@ -34,7 +34,7 @@ public sealed record ReportInventoryDto(int Usable, int Maintenance, int Lost, d
 
 public sealed record ReportSummaryDto(
     ReportPeriodDto Period,
-    Guid BranchId,
+    int BranchId,
     string BranchCode,
     string BranchName,
     ReportOrderDto Orders,

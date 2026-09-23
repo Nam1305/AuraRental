@@ -6,8 +6,8 @@ export function searchCustomers(query: string) {
   return apiRequest<CustomerListItem[]>(`/api/v1/customers?${search}`)
 }
 
-export const getCustomer = (customerId: string) =>
+export const getCustomer = (customerId: number) =>
   apiRequest<Customer>(`/api/v1/customers/${customerId}`)
 
-export const getCustomerOrders = (customerId: string) =>
+export const getCustomerOrders = (customerId: number) =>
   apiRequest<CustomerOrderHistory[]>(`/api/v1/customers/${customerId}/orders?limit=50`)

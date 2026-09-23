@@ -4,14 +4,14 @@ namespace AuraRental.Service.Interface.Service;
 
 public interface IRequestContext
 {
-    Guid UserId { get; }
+    int UserId { get; }
     UserRole Role { get; }
-    Guid BranchId { get; }
+    int BranchId { get; }
     bool HasBranch { get; }
 }
 
 public interface IRequestContextInitializer
 {
-    void SetUser(Guid userId, UserRole role);
-    void SetBranch(Guid branchId);
+    void SetUser(int userId, UserRole role);
+    void SetBranch(int branchId);
 }

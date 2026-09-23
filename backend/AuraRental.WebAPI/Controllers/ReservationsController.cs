@@ -30,40 +30,40 @@ public sealed class ReservationsController(IReservationUseCase reservationUseCas
         CancellationToken cancellationToken = default) =>
         ResponseData(await reservationUseCase.Search(status, query, limit, cancellationToken));
 
-    [HttpGet("{reservationId:guid}")]
+    [HttpGet("{reservationId:int}")]
     public async Task<ActionResult<ApiResponse<ReservationDto>>> Get(
-        Guid reservationId,
+        int reservationId,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.Get(reservationId, cancellationToken));
 
-    [HttpPost("{reservationId:guid}/otp/reissue")]
+    [HttpPost("{reservationId:int}/otp/reissue")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<ReissueOtpDto>>> ReissueOtp(
-        Guid reservationId,
+        int reservationId,
         [FromBody] ReissueOtpRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.ReissueOtp(reservationId, request, cancellationToken));
 
-    [HttpPut("{reservationId:guid}/rental-selection")]
+    [HttpPut("{reservationId:int}/rental-selection")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<ReservationDto>>> UpdateRentalSelection(
-        Guid reservationId,
+        int reservationId,
         [FromBody] UpdateRentalSelectionRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.UpdateRentalSelection(reservationId, request, cancellationToken));
 
-    [HttpPost("{reservationId:guid}/cancel")]
+    [HttpPost("{reservationId:int}/cancel")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<CancelReservationDto>>> Cancel(
-        Guid reservationId,
+        int reservationId,
         [FromBody] CancelReservationRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.Cancel(reservationId, request, cancellationToken));
 
-    [HttpPost("{reservationId:guid}/payments")]
+    [HttpPost("{reservationId:int}/payments")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<RecordPaymentDto>>> RecordPayment(
-        Guid reservationId,
+        int reservationId,
         [FromBody] RecordPaymentRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await reservationUseCase.RecordPayment(reservationId, request, cancellationToken));

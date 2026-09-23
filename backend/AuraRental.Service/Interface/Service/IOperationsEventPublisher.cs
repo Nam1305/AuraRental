@@ -2,9 +2,9 @@ namespace AuraRental.Service.Interface.Service;
 
 public sealed record OrderCreatedEvent(
     string Type,
-    Guid BranchId,
+    int BranchId,
     DateTimeOffset OccurredAt,
-    Guid OrderId,
+    int OrderId,
     string OrderNo,
     string CustomerName);
 

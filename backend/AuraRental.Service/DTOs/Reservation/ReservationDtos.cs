@@ -1,6 +1,6 @@
 namespace AuraRental.Service.DTOs.Reservation;
 
-public sealed record ReservationItemRequest(Guid InventoryItemId, string PackageCode);
+public sealed record ReservationItemRequest(int InventoryItemId, string PackageCode);
 
 public sealed record ReceivedPaymentRequest(
     string Type,
@@ -11,15 +11,14 @@ public sealed record ReceivedPaymentRequest(
     DateTimeOffset PaidAt);
 
 public sealed record CreateReservationRequest(
-    Guid CustomerId,
     DateTimeOffset RentalStartAt,
     DateTimeOffset RentalEndAt,
     string DepositPlan,
     IReadOnlyList<ReservationItemRequest> Items,
     ReceivedPaymentRequest ReceivedPayment);
 
-public sealed record ReservationBranchDto(Guid Id, string Code, string Name);
-public sealed record ReservationCustomerDto(Guid Id, string Name, string Phone);
+public sealed record ReservationBranchDto(int Id, string Code, string Name);
+public sealed record ReservationCustomerDto(int Id, string Name, string Phone);
 
 public sealed record ReservationDepositDto(
     string Plan,
@@ -28,7 +27,7 @@ public sealed record ReservationDepositDto(
     decimal Remaining);
 
 public sealed record ReservationItemDto(
-    Guid InventoryItemId,
+    int InventoryItemId,
     string AssetCode,
     string ProductName,
     string Size,
@@ -38,11 +37,11 @@ public sealed record ReservationItemDto(
 public sealed record CustomerFormCredentialDto(string Url, string Otp, DateTimeOffset ExpiresAt);
 
 public sealed record ReservationDto(
-    Guid Id,
+    int Id,
     string ReservationNo,
     string Status,
     ReservationBranchDto Branch,
-    ReservationCustomerDto Customer,
+    ReservationCustomerDto? Customer,
     DateTimeOffset RentalStartAt,
     DateTimeOffset RentalEndAt,
     ReservationDepositDto Deposit,
@@ -52,10 +51,10 @@ public sealed record ReservationDto(
     DateTimeOffset CreatedAt);
 
 public sealed record ReservationListItemDto(
-    Guid Id,
+    int Id,
     string ReservationNo,
     string Status,
-    Guid CustomerId,
+    int? CustomerId,
     string CustomerName,
     string PhoneMasked,
     string ItemSummary,
@@ -68,7 +67,7 @@ public sealed record ReservationListItemDto(
 public sealed record ReissueOtpRequest(string Reason);
 public sealed record ReissueOtpDto(string FormUrl, string Otp, DateTimeOffset ExpiresAt);
 public sealed record CancelReservationRequest(string Reason, string PaymentDecision);
-public sealed record CancelReservationDto(Guid ReservationId, string Status, bool RequiresPaymentResolution);
+public sealed record CancelReservationDto(int ReservationId, string Status, bool RequiresPaymentResolution);
 
 public sealed record UpdateRentalSelectionRequest(
     DateTimeOffset RentalStartAt,
@@ -87,7 +86,7 @@ public sealed record RecordPaymentRequest(
     string? Note);
 
 public sealed record RecordPaymentDto(
-    Guid PaymentId,
+    int PaymentId,
     string Status,
     decimal DepositConfirmed,
     decimal DepositRemaining,

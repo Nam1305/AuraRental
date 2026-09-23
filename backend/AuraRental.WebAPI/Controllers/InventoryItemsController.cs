@@ -13,9 +13,9 @@ namespace AuraRental.WebAPI.Controllers;
 [Idempotent]
 public sealed class InventoryItemsController(ICatalogUseCase catalogUseCase) : ApiControllerBase
 {
-    [HttpPatch("{inventoryItemId:guid}")]
+    [HttpPatch("{inventoryItemId:int}")]
     public async Task<ActionResult<ApiResponse<InventoryItemDto>>> Update(
-        Guid inventoryItemId,
+        int inventoryItemId,
         [FromBody] UpdateInventoryItemRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await catalogUseCase.UpdateInventoryItem(inventoryItemId, request, cancellationToken));

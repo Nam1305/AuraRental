@@ -21,9 +21,9 @@ public sealed class ProductsController(ICatalogUseCase catalogUseCase) : ApiCont
         CancellationToken cancellationToken = default) =>
         ResponseData(await catalogUseCase.GetProducts(query, category, active, limit, cancellationToken));
 
-    [HttpGet("{productId:guid}")]
+    [HttpGet("{productId:int}")]
     public async Task<ActionResult<ApiResponse<ProductDetailDto>>> GetById(
-        Guid productId,
+        int productId,
         CancellationToken cancellationToken) =>
         ResponseData(await catalogUseCase.GetProduct(productId, cancellationToken));
 
@@ -37,18 +37,18 @@ public sealed class ProductsController(ICatalogUseCase catalogUseCase) : ApiCont
         return CreatedAtAction(nameof(GetById), new { productId = product.Id }, ResponseData(product));
     }
 
-    [HttpPatch("{productId:guid}")]
+    [HttpPatch("{productId:int}")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<ProductDetailDto>>> Update(
-        Guid productId,
+        int productId,
         [FromBody] UpdateProductRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await catalogUseCase.UpdateProduct(productId, request, cancellationToken));
 
-    [HttpPost("{productId:guid}/variants")]
+    [HttpPost("{productId:int}/variants")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<ProductVariantDto>>> AddVariant(
-        Guid productId,
+        int productId,
         [FromBody] CreateProductVariantInput request,
         CancellationToken cancellationToken)
     {

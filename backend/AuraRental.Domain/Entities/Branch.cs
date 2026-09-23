@@ -2,7 +2,7 @@ namespace AuraRental.Domain.Entities;
 
 public sealed class Branch
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string Address { get; set; } = null!;

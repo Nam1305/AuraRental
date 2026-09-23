@@ -1,8 +1,8 @@
 export type ReservationListItem = {
-  id: string
+  id: number
   reservationNo: string
   status: string
-  customerId: string
+  customerId: number | null
   customerName: string
   phoneMasked: string
   itemSummary: string
@@ -14,11 +14,11 @@ export type ReservationListItem = {
 }
 
 export type ReservationDetail = {
-  id: string
+  id: number
   reservationNo: string
   status: string
-  branch: { id: string; code: string; name: string }
-  customer: { id: string; name: string; phone: string }
+  branch: { id: number; code: string; name: string }
+  customer: { id: number; name: string; phone: string } | null
   rentalStartAt: string
   rentalEndAt: string
   deposit: {
@@ -28,7 +28,7 @@ export type ReservationDetail = {
     remaining: number
   }
   items: Array<{
-    inventoryItemId: string
+    inventoryItemId: number
     assetCode: string
     productName: string
     size: string
@@ -41,10 +41,10 @@ export type ReservationDetail = {
 }
 
 export type Quote = {
-  branchId: string
+  branchId: number
   currency: string
   items: Array<{
-    inventoryItemId: string
+    inventoryItemId: number
     assetCode: string
     productName: string
     size: string
@@ -58,10 +58,9 @@ export type Quote = {
   expiresAt: string
 }
 
-export type RentalSelection = { inventoryItemId: string; packageCode: string }
+export type RentalSelection = { inventoryItemId: number; packageCode: string }
 
 export type CreateReservationInput = {
-  customerId: string
   rentalStartAt: string
   rentalEndAt: string
   depositPlan: string

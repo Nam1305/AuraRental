@@ -7,15 +7,15 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 
 public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepository
 {
-    public Task<Branch?> GetBranch(Guid branchId, CancellationToken cancellationToken) =>
+    public Task<Branch?> GetBranch(int branchId, CancellationToken cancellationToken) =>
         context.Branches.AsNoTracking().FirstOrDefaultAsync(branch => branch.Id == branchId && branch.IsActive, cancellationToken);
 
-    public Task<Customer?> GetCustomer(Guid customerId, CancellationToken cancellationToken) =>
+    public Task<Customer?> GetCustomer(int customerId, CancellationToken cancellationToken) =>
         context.Customers.AsNoTracking().FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
 
     public async Task<IReadOnlyList<InventoryItem>> LockInventoryItems(
-        Guid branchId,
-        IReadOnlyCollection<Guid> inventoryItemIds,
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
         CancellationToken cancellationToken)
     {
         var ids = inventoryItemIds.Distinct().Order().ToArray();
@@ -34,11 +34,11 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
     }
 
     public async Task<bool> AreInventoryItemsAvailable(
-        Guid branchId,
-        IReadOnlyCollection<Guid> inventoryItemIds,
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
         DateTimeOffset startAt,
         DateTimeOffset endAt,
-        Guid? ignoredReservationId,
+        int? ignoredReservationId,
         CancellationToken cancellationToken)
     {
         var ids = inventoryItemIds.Distinct().ToArray();
@@ -66,14 +66,14 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
 
     public void AddReservation(Reservation reservation) => context.Reservations.Add(reservation);
 
-    public async Task<Reservation?> LockReservation(Guid reservationId, CancellationToken cancellationToken) =>
+    public async Task<Reservation?> LockReservation(int reservationId, CancellationToken cancellationToken) =>
         await context.Reservations
             .FromSqlInterpolated($"SELECT * FROM aura.reservations WHERE id = {reservationId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
     public Task<Reservation?> GetReservation(
-        Guid reservationId,
-        Guid? branchId,
+        int reservationId,
+        int? branchId,
         bool tracking,
         CancellationToken cancellationToken)
     {
@@ -92,7 +92,7 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
             .SingleOrDefaultAsync(reservation => reservation.FormTokenHash == tokenHash, cancellationToken);
 
     public async Task<IReadOnlyList<Reservation>> SearchReservations(
-        Guid branchId,
+        int branchId,
         IReadOnlyCollection<ReservationStatus> statuses,
         string? query,
         int limit,
@@ -109,8 +109,9 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
             var value = query.Trim();
             reservations = reservations.Where(reservation =>
                 EF.Functions.ILike(reservation.ReservationNo, $"%{value}%") ||
-                EF.Functions.ILike(reservation.Customer.Name, $"%{value}%") ||
-                reservation.Customer.Phone.Contains(value));
+                (reservation.Customer != null && (
+                    EF.Functions.ILike(reservation.Customer.Name, $"%{value}%") ||
+                    reservation.Customer.Phone.Contains(value))));
         }
 
         return await reservations.OrderByDescending(reservation => reservation.CreatedAt).Take(limit).ToListAsync(cancellationToken);
@@ -118,7 +119,7 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
 
     public void AddPayment(Payment payment) => context.Payments.Add(payment);
 
-    public Task<Payment?> GetPayment(Guid paymentId, Guid branchId, bool tracking, CancellationToken cancellationToken)
+    public Task<Payment?> GetPayment(int paymentId, int branchId, bool tracking, CancellationToken cancellationToken)
     {
         IQueryable<Payment> payments = context.Payments;
         if (!tracking)
@@ -138,21 +139,21 @@ public sealed class RentalRepository(AuraRentalDbContext context) : IRentalRepos
 
     public void AddOrder(Order order) => context.Orders.Add(order);
 
-    public async Task<Order?> LockOrder(Guid orderId, CancellationToken cancellationToken) =>
+    public async Task<Order?> LockOrder(int orderId, CancellationToken cancellationToken) =>
         await context.Orders
             .FromSqlInterpolated($"SELECT * FROM aura.orders WHERE id = {orderId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
-    public Task<Order?> GetOrder(Guid orderId, Guid branchId, bool tracking, CancellationToken cancellationToken) =>
+    public Task<Order?> GetOrder(int orderId, int branchId, bool tracking, CancellationToken cancellationToken) =>
         OrderGraph(tracking).SingleOrDefaultAsync(
             order => order.Id == orderId && order.BranchId == branchId,
             cancellationToken);
 
-    public Task<Order?> GetOrderByReservationId(Guid reservationId, bool tracking, CancellationToken cancellationToken) =>
+    public Task<Order?> GetOrderByReservationId(int reservationId, bool tracking, CancellationToken cancellationToken) =>
         OrderGraph(tracking).SingleOrDefaultAsync(order => order.ReservationId == reservationId, cancellationToken);
 
     public async Task<IReadOnlyList<Order>> SearchOrders(
-        Guid branchId,
+        int branchId,
         IReadOnlyCollection<OrderStatus> statuses,
         string? query,
         DateOnly? from,

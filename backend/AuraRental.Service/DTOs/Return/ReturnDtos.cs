@@ -1,14 +1,14 @@
 namespace AuraRental.Service.DTOs.Return;
 
 public sealed record ReturnQueueItemDto(
-    Guid OrderId,
+    int OrderId,
     string OrderNo,
     string CustomerName,
     DateTimeOffset? ReturnedAt,
     int ItemCount,
     int InspectionCompleted,
     int InspectionTotal,
-    Guid? RefundId,
+    int? RefundId,
     int? RefundVersion,
     string? RefundStatus,
     decimal? RefundAmount,
@@ -30,7 +30,7 @@ public sealed record RefundCalculationDto(
     decimal AdditionalCollection);
 
 public sealed record InspectionDto(
-    Guid OrderItemId,
+    int OrderItemId,
     string Condition,
     decimal ProcessingFee,
     string InventoryOutcome,
@@ -39,10 +39,11 @@ public sealed record InspectionDto(
 public sealed record CreateRefundRequest(string? AdjustmentReason);
 
 public sealed record RefundSnapshotItemDto(
-    Guid OrderItemId,
+    int OrderItemId,
     string ProductName,
     string Size,
     string AssetCode,
+    string? PackageCode,
     string Condition,
     decimal ActualRentalFee,
     decimal ProcessingFee,
@@ -50,8 +51,8 @@ public sealed record RefundSnapshotItemDto(
     IReadOnlyList<string> DamagePhotoPaths);
 
 public sealed record RefundDto(
-    Guid RefundId,
-    Guid OrderId,
+    int RefundId,
+    int OrderId,
     int Version,
     string Status,
     decimal DepositAmount,
@@ -66,12 +67,12 @@ public sealed record ReturnForReviewRequest(string Reason);
 public sealed record ApproveRefundRequest(int ExpectedVersion);
 
 public sealed record ApproveRefundDto(
-    Guid RefundId,
+    int RefundId,
     int Version,
     string Status,
     decimal RefundAmount,
     decimal AdditionalCollection,
-    Guid ApprovedBy,
+    int ApprovedBy,
     DateTimeOffset ApprovedAt,
     bool ReceiptReady);
 
@@ -83,12 +84,34 @@ public sealed record SettleRefundRequest(
     string? ProofPath,
     DateTimeOffset PaidAt);
 
-public sealed record SettledInventoryDto(Guid InventoryItemId, string Status);
+public sealed record SettledInventoryDto(int InventoryItemId, string Status);
 
 public sealed record SettleRefundDto(
     string SettlementType,
     decimal Amount,
-    Guid? PaymentId,
+    int? PaymentId,
     string OrderStatus,
     DateTimeOffset SettledAt,
     IReadOnlyList<SettledInventoryDto> Inventory);
+
+public sealed record RefundReceiptItemDto(
+    string ProductName,
+    string Size,
+    string AssetCode,
+    string? PackageCode,
+    decimal RentalFee);
+
+public sealed record RefundReceiptDto(
+    int RefundId,
+    int OrderId,
+    string OrderNo,
+    string BranchName,
+    string CustomerName,
+    string Status,
+    DateTimeOffset FinalizedAt,
+    decimal DepositAmount,
+    decimal RentalFee,
+    decimal ProcessingFee,
+    decimal RefundAmount,
+    decimal AdditionalCollection,
+    IReadOnlyList<RefundReceiptItemDto> Items);

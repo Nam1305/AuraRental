@@ -5,20 +5,20 @@ namespace AuraRental.Service.Service;
 
 public sealed class RequestContext : IRequestContext, IRequestContextInitializer
 {
-    private Guid? _userId;
+    private int? _userId;
     private UserRole? _role;
-    private Guid? _branchId;
+    private int? _branchId;
 
-    public Guid UserId => _userId ?? throw new InvalidOperationException("User context has not been initialized.");
+    public int UserId => _userId ?? throw new InvalidOperationException("User context has not been initialized.");
     public UserRole Role => _role ?? throw new InvalidOperationException("User context has not been initialized.");
-    public Guid BranchId => _branchId ?? throw new InvalidOperationException("Branch context has not been initialized.");
+    public int BranchId => _branchId ?? throw new InvalidOperationException("Branch context has not been initialized.");
     public bool HasBranch => _branchId.HasValue;
 
-    public void SetUser(Guid userId, UserRole role)
+    public void SetUser(int userId, UserRole role)
     {
         _userId = userId;
         _role = role;
     }
 
-    public void SetBranch(Guid branchId) => _branchId = branchId;
+    public void SetBranch(int branchId) => _branchId = branchId;
 }

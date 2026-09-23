@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using System.Security.Cryptography;
 using AuraRental.Service.DTOs.Upload;
 using AuraRental.Service.Exceptions;
 using AuraRental.Service.Interface.Service;
@@ -37,7 +38,8 @@ public sealed class R2UploadService(
 
         var settings = options.Value;
         ValidateConfiguration(settings);
-        var objectPath = $"{request.Purpose.ToLowerInvariant()}/{DateTime.UtcNow:yyyy/MM/dd}/{Guid.NewGuid():N}{extension}";
+        var randomSuffix = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+        var objectPath = $"{request.Purpose.ToLowerInvariant()}/{DateTime.UtcNow:yyyy/MM/dd}/{randomSuffix}{extension}";
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(settings.UploadUrlLifetimeSeconds);
         var presign = new GetPreSignedUrlRequest
         {

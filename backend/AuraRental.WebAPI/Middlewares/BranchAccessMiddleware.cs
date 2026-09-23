@@ -18,7 +18,7 @@ public sealed class BranchAccessMiddleware(
             return;
         }
 
-        if (!Guid.TryParse(context.Request.Headers["X-Branch-Id"], out var branchId))
+        if (!int.TryParse(context.Request.Headers["X-Branch-Id"], out var branchId))
         {
             throw new ValidationException("BRANCH_REQUIRED", "Header X-Branch-Id là bắt buộc.");
         }

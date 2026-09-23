@@ -7,14 +7,14 @@ public sealed record DashboardCounts(int PendingDeposit, int ActiveReservations,
 
 public interface IOperationsRepository
 {
-    Task<Branch?> GetBranch(Guid branchId, CancellationToken cancellationToken);
+    Task<Branch?> GetBranch(int branchId, CancellationToken cancellationToken);
     Task<DashboardCounts> GetDashboardCounts(
-        Guid branchId,
+        int branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
         CancellationToken cancellationToken);
     Task<IReadOnlyList<DashboardTaskDto>> GetDashboardTasks(
-        Guid branchId,
+        int branchId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
         CancellationToken cancellationToken);

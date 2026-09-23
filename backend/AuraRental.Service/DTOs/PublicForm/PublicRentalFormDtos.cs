@@ -28,7 +28,7 @@ public sealed record SubmitPublicRentalFormRequest(
     string DeliveryAddress);
 
 public sealed record SubmitPublicRentalFormDto(
-    Guid OrderId,
+    int OrderId,
     string OrderNo,
     string Status,
     string BranchName,

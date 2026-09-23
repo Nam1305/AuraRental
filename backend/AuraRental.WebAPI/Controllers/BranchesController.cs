@@ -27,10 +27,10 @@ public sealed class BranchesController(IAdminUseCase adminUseCase) : ApiControll
         return StatusCode(StatusCodes.Status201Created, ResponseData(branch));
     }
 
-    [HttpPatch("{branchId:guid}")]
+    [HttpPatch("{branchId:int}")]
     [Idempotent]
     public async Task<ActionResult<ApiResponse<BranchSummaryDto>>> Update(
-        Guid branchId,
+        int branchId,
         [FromBody] UpdateBranchRequest request,
         CancellationToken cancellationToken) =>
         ResponseData(await adminUseCase.UpdateBranch(branchId, request, cancellationToken));

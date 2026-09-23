@@ -74,4 +74,7 @@ public static class RentalRules
             ? $"{branchCode}-{suffix}"
             : $"{branchCode}-{marker}-{suffix}";
     }
+
+    public static string CreateTransactionReference(string branchCode) =>
+        CreateNumber(branchCode, "GD");
 }

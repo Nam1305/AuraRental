@@ -1,10 +1,10 @@
 namespace AuraRental.Service.DTOs.Order;
 
 public sealed record OrderListItemDto(
-    Guid Id,
+    int Id,
     string OrderNo,
     string Status,
-    Guid CustomerId,
+    int CustomerId,
     string CustomerName,
     string PhoneMasked,
     string ItemSummary,
@@ -16,14 +16,14 @@ public sealed record OrderListItemDto(
     DateTimeOffset CreatedAt);
 
 public sealed record OrderCustomerDto(
-    Guid Id,
+    int Id,
     string NameSnapshot,
     string PhoneSnapshot,
     string DeliveryAddressSnapshot);
 
 public sealed record OrderItemDto(
-    Guid OrderItemId,
-    Guid InventoryItemId,
+    int OrderItemId,
+    int InventoryItemId,
     string ProductName,
     string Size,
     string AssetCode,
@@ -35,7 +35,7 @@ public sealed record OrderItemDto(
     IReadOnlyList<string> DamagePhotoPaths);
 
 public sealed record OrderPaymentDto(
-    Guid Id,
+    int Id,
     string Type,
     decimal Amount,
     string Method,
@@ -46,17 +46,17 @@ public sealed record OrderPaymentDto(
 public sealed record IdentityVerificationDto(
     bool Required,
     bool Verified,
-    Guid? VerifiedBy,
+    int? VerifiedBy,
     DateTimeOffset? VerifiedAt);
 
 public sealed record DeliveryDto(string Status, string? TrackingCode, DateTimeOffset? CompletedAt);
 
 public sealed record OrderDetailDto(
-    Guid Id,
-    Guid ReservationId,
+    int Id,
+    int ReservationId,
     string OrderNo,
     string Status,
-    Guid BranchId,
+    int BranchId,
     string BranchCode,
     string BranchName,
     OrderCustomerDto Customer,
@@ -76,17 +76,17 @@ public sealed record VerifyIdentityRequest(bool Verified);
 
 public sealed record VerifyIdentityDto(
     bool Verified,
-    Guid? VerifiedBy,
+    int? VerifiedBy,
     DateTimeOffset? VerifiedAt,
     string OrderStatus);
 
 public sealed record CancelOrderRequest(string Reason, string PaymentDecision);
-public sealed record CancelOrderDto(Guid OrderId, string Status, string CancellationReason, bool InventoryReleased, bool RequiresPaymentResolution);
+public sealed record CancelOrderDto(int OrderId, string Status, string CancellationReason, bool InventoryReleased, bool RequiresPaymentResolution);
 
 public sealed record StartDeliveryRequest(string? TrackingCode, DateTimeOffset StartedAt);
 public sealed record CompleteDeliveryRequest(DateTimeOffset DeliveredAt);
 public sealed record CompleteReturnDeliveryRequest(DateTimeOffset ReturnedAt);
-public sealed record OrderTransitionDto(Guid OrderId, string Status, string DeliveryStatus, string ReturnDeliveryStatus);
+public sealed record OrderTransitionDto(int OrderId, string Status, string DeliveryStatus, string ReturnDeliveryStatus);
 
 public sealed record PaymentActionRequest(string? Reason);
-public sealed record PaymentActionDto(Guid PaymentId, string Status, decimal DepositConfirmed, decimal DepositRemaining, string? OrderStatus);
+public sealed record PaymentActionDto(int PaymentId, string Status, decimal DepositConfirmed, decimal DepositRemaining, string? OrderStatus);

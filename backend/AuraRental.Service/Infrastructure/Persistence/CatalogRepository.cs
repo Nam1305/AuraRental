@@ -7,7 +7,7 @@ namespace AuraRental.Service.Infrastructure.Persistence;
 public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRepository
 {
     public async Task<IReadOnlyList<Product>> SearchProducts(
-        Guid branchId,
+        int branchId,
         string? query,
         string? category,
         bool? active,
@@ -48,7 +48,7 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Product?> GetProduct(Guid branchId, Guid productId, CancellationToken cancellationToken) =>
+    public Task<Product?> GetProduct(int branchId, int productId, CancellationToken cancellationToken) =>
         context.Products
             .AsNoTracking()
             .AsSplitQuery()
@@ -58,12 +58,12 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
                 .ThenInclude(variant => variant.RentalPrices.Where(price => price.BranchId == branchId))
             .FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);
 
-    public Task<Product?> GetProductForUpdate(Guid branchId, Guid productId, CancellationToken cancellationToken) =>
+    public Task<Product?> GetProductForUpdate(int branchId, int productId, CancellationToken cancellationToken) =>
         context.Products.FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);
 
     public Task<ProductVariant?> GetVariantForUpdate(
-        Guid variantId,
-        Guid branchId,
+        int variantId,
+        int branchId,
         CancellationToken cancellationToken) =>
         context.ProductVariants
             .Include(variant => variant.Product)
@@ -71,17 +71,17 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
             .FirstOrDefaultAsync(variant => variant.Id == variantId && variant.Product.BranchId == branchId, cancellationToken);
 
     public Task<InventoryItem?> GetInventoryItemForUpdate(
-        Guid inventoryItemId,
-        Guid branchId,
+        int inventoryItemId,
+        int branchId,
         CancellationToken cancellationToken) =>
         context.InventoryItems.FirstOrDefaultAsync(
             item => item.Id == inventoryItemId && item.BranchId == branchId,
             cancellationToken);
 
-    public Task<bool> ProductCodeExists(Guid branchId, string code, CancellationToken cancellationToken) =>
+    public Task<bool> ProductCodeExists(int branchId, string code, CancellationToken cancellationToken) =>
         context.Products.AnyAsync(product => product.BranchId == branchId && product.Code == code, cancellationToken);
 
-    public Task<bool> VariantSizeExists(Guid productId, string size, CancellationToken cancellationToken) =>
+    public Task<bool> VariantSizeExists(int productId, string size, CancellationToken cancellationToken) =>
         context.ProductVariants.AnyAsync(
             variant => variant.ProductId == productId && variant.Size == size,
             cancellationToken);

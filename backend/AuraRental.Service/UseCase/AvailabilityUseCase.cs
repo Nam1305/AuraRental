@@ -68,6 +68,7 @@ public sealed class AvailabilityUseCase(
                     group.Key.ProductId,
                     group.Key.VariantId,
                     group.Key.Name,
+                    first.Variant.Product.ImagePaths,
                     group.Key.Size,
                     group.Key.Measurements,
                     inventoryItems.Count(item => item.AvailableForWholePeriod),

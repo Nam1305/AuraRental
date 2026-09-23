@@ -18,7 +18,7 @@ public sealed class CurrentUserMiddleware(
 
         var subject = context.User.FindFirstValue("sub")
             ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(subject, out var userId))
+        if (!int.TryParse(subject, out var userId))
         {
             throw new UnauthorizedAccessException("Token không có subject hợp lệ.");
         }
