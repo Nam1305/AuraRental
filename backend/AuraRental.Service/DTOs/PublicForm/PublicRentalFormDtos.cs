@@ -25,6 +25,8 @@ public sealed record SubmitPublicRentalFormRequest(
     string Otp,
     string CustomerName,
     string CustomerPhone,
+    string? InstagramHandle,
+    string? TiktokHandle,
     string DeliveryAddress);
 
 public sealed record SubmitPublicRentalFormDto(

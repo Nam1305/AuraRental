@@ -5,6 +5,7 @@ import { ImageUploadInput } from '@/shared/components/ImageUploadInput'
 import { StoredImage } from '@/shared/components/StoredImage'
 import { MoneyField } from '@/shared/components/MoneyInput'
 import { formatMoney } from '@/shared/format/money'
+import { formatDateTime } from '@/shared/format/date'
 import { useApiQuery } from '@/shared/hooks/use-api-query'
 import {
   addInventoryItems,
@@ -16,7 +17,7 @@ import {
   updateInventoryItem,
   updateProduct,
 } from './catalog.api'
-import type { InventoryItem, ProductDetail, ProductVariant, VariantInput } from './catalog.types'
+import type { InventoryItem, LatestRenter, ProductDetail, ProductVariant, VariantInput } from './catalog.types'
 
 const EMPTY_VARIANT = {
   size: '', measurements: '', replacementValue: '', price1d: '', price2d: '', price3d: '', assetCodes: '',
@@ -212,8 +213,50 @@ function VariantCard({ branchId, variant, canManage, onChanged }: { branchId: nu
 
   return <section className="variant-card"><div className="section-heading"><div><span className="eyebrow">Size</span><h3>{variant.size}</h3><small>{variant.measurements || 'Chưa có số đo'} · Giá trị {formatMoney(variant.replacementValue)}</small></div><strong>{variant.inventorySummary.usable}/{variant.inventorySummary.total} usable</strong></div>
     <div className="price-editor">{(['one', 'two', 'three'] as const).map((key, index) => <MoneyField key={key} label={`Giá ${index + 1}D`} required={key === 'one'} disabled={!canManage} value={prices[key]} onChange={(next) => setPrices((current) => ({ ...current, [key]: next }))} />)}{canManage && <button className="button" type="button" onClick={() => void savePrices()}>Lưu giá</button>}</div>
-    <div className="inventory-list">{variant.inventoryItems.map((item) => <div className="inventory-row" key={item.id}><div><strong>{item.assetCode}</strong></div>{canManage ? <select value={item.status} onChange={(event) => void changeStatus(item, event.target.value as InventoryItem['status'])}><option value="USABLE">Sẵn sàng</option><option value="MAINTENANCE">Bảo trì</option><option value="LOST">Thất lạc</option><option value="RETIRED">Ngừng dùng</option></select> : <span className="status-pill">{item.status}</span>}</div>)}</div>
+    <div className="inventory-list">{variant.inventoryItems.map((item) => <div className="inventory-row" key={item.id}><div><strong>{item.assetCode}</strong><LatestRenterInfo renter={item.latestRenter} /></div>{canManage ? <select value={item.status} onChange={(event) => void changeStatus(item, event.target.value as InventoryItem['status'])}><option value="USABLE">Sẵn sàng</option><option value="MAINTENANCE">Bảo trì</option><option value="LOST">Thất lạc</option><option value="RETIRED">Ngừng dùng</option></select> : <span className="status-pill">{item.status}</span>}</div>)}</div>
     {canManage && <div className="add-assets"><label className="field"><span>Thêm mã vật lý</span><textarea rows={2} value={assetCodes} onChange={(event) => setAssetCodes(event.target.value)} placeholder="Mỗi dòng một mã" /></label><button className="button" type="button" disabled={!assetCodes.trim()} onClick={() => void addAssets()}>Thêm vào kho</button></div>}
     {message && <div className="success-note">{message}</div>}{error && <div className="inline-error">{error.message}</div>}
   </section>
+}
+
+function LatestRenterInfo({ renter }: { renter: LatestRenter | null }) {
+  const [copied, setCopied] = useState<string | null>(null)
+
+  const copy = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      const input = document.createElement('textarea')
+      input.value = value
+      input.style.position = 'fixed'
+      input.style.opacity = '0'
+      document.body.append(input)
+      input.select()
+      document.execCommand('copy')
+      input.remove()
+    }
+    setCopied(label)
+    window.setTimeout(() => setCopied(null), 1600)
+  }
+
+  if (!renter) return <small className="latest-renter-empty">Chưa có lượt thuê trước đây</small>
+
+  const contacts = [
+    ['Tên', renter.name],
+    ['SĐT', renter.phone],
+    ...(renter.instagramHandle ? [['Instagram', `@${renter.instagramHandle}`]] : []),
+    ...(renter.tiktokHandle ? [['TikTok', `@${renter.tiktokHandle}`]] : []),
+  ] as Array<[string, string]>
+  const allDetails = contacts.map(([label, value]) => `${label}: ${value}`).join('\n')
+
+  return <div className="latest-renter">
+    <span className="latest-renter__label">Khách thuê gần nhất · {formatDateTime(renter.rentalStartAt)}</span>
+    <a href={`/customers/${renter.customerId}`} className="latest-renter__name">{renter.name}</a>
+    <small>{renter.orderNo} · trả {formatDateTime(renter.rentalEndAt)}</small>
+    <div className="latest-renter__copy-actions">
+      {contacts.map(([label, value]) => <button key={label} type="button" onClick={() => void copy(label, value)} title={`Sao chép ${label}: ${value}`}>Copy {label}</button>)}
+      <button type="button" onClick={() => void copy('Tất cả', allDetails)}>Copy tất cả</button>
+      {copied && <span role="status">Đã copy {copied}</span>}
+    </div>
+  </div>
 }

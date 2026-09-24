@@ -55,6 +55,11 @@ public sealed class CatalogUseCase(
     {
         var product = await catalogRepository.GetProduct(requestContext.BranchId, productId, cancellationToken)
             ?? throw new NotFoundException("PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.");
+        var latestRenters = await catalogRepository.GetLatestRentalCustomers(
+            requestContext.BranchId,
+            product.Variants.SelectMany(variant => variant.InventoryItems).Select(item => item.Id).ToArray(),
+            cancellationToken);
+        var latestRenterByInventoryId = latestRenters.ToDictionary(item => item.InventoryItemId);
 
         return new ProductDetailDto(
             product.Id,
@@ -66,7 +71,7 @@ public sealed class CatalogUseCase(
             product.Description,
             product.ImagePaths,
             product.IsActive,
-            product.Variants.OrderBy(variant => variant.Size).Select(ToVariant).ToList());
+            product.Variants.OrderBy(variant => variant.Size).Select(variant => ToVariant(variant, latestRenterByInventoryId)).ToList());
     }
 
     public async Task<ProductDetailDto> CreateProduct(
@@ -201,7 +206,7 @@ public sealed class CatalogUseCase(
         }).ToList();
         catalogRepository.AddInventoryItems(items);
         await unitOfWork.SaveChanges(cancellationToken);
-        return items.Select(ToInventoryItem).ToList();
+        return items.Select(item => ToInventoryItem(item)).ToList();
     }
 
     public async Task<InventoryItemDto> UpdateInventoryItem(
@@ -222,7 +227,9 @@ public sealed class CatalogUseCase(
         return ToInventoryItem(item);
     }
 
-    private static ProductVariantDto ToVariant(ProductVariant variant)
+    private static ProductVariantDto ToVariant(
+        ProductVariant variant,
+        IReadOnlyDictionary<int, LatestRentalCustomerDto>? latestRenterByInventoryId = null)
     {
         var inventory = variant.InventoryItems;
         return new ProductVariantDto(
@@ -240,7 +247,13 @@ public sealed class CatalogUseCase(
                 inventory.Count(item => item.Status == InventoryStatus.Maintenance),
                 inventory.Count(item => item.Status == InventoryStatus.Lost),
                 inventory.Count(item => item.Status == InventoryStatus.Retired)),
-            inventory.OrderBy(item => item.AssetCode).Select(ToInventoryItem).ToList());
+            inventory.OrderBy(item => item.AssetCode)
+                .Select(item => ToInventoryItem(
+                    item,
+                    latestRenterByInventoryId is not null && latestRenterByInventoryId.TryGetValue(item.Id, out var latestRenter)
+                        ? latestRenter
+                        : null))
+                .ToList());
     }
 
     private ProductVariant CreateVariantEntity(CreateProductVariantInput request)
@@ -332,8 +345,8 @@ public sealed class CatalogUseCase(
     private static RentalPriceDto ToPrice(BranchRentalPrice price) =>
         new(price.PackageCode, ApiText.PackageLabel(price.PackageCode), price.Price);
 
-    private static InventoryItemDto ToInventoryItem(InventoryItem item) =>
-        new(item.Id, item.AssetCode, ApiText.EnumValue(item.Status));
+    private static InventoryItemDto ToInventoryItem(InventoryItem item, LatestRentalCustomerDto? latestRenter = null) =>
+        new(item.Id, item.AssetCode, ApiText.EnumValue(item.Status), latestRenter);
 
     private void EnsureManager()
     {

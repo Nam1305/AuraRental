@@ -1,4 +1,6 @@
 using AuraRental.Domain.Entities;
+using AuraRental.Domain.Enums;
+using AuraRental.Service.DTOs.Catalog;
 using AuraRental.Service.Interface.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,6 +59,44 @@ public sealed class CatalogRepository(AuraRentalDbContext context) : ICatalogRep
             .Include(product => product.Variants)
                 .ThenInclude(variant => variant.RentalPrices.Where(price => price.BranchId == branchId))
             .FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);
+
+    public async Task<IReadOnlyList<LatestRentalCustomerDto>> GetLatestRentalCustomers(
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
+        CancellationToken cancellationToken)
+    {
+        if (inventoryItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        var completedOrCurrentRentalItems = await context.OrderItems
+            .AsNoTracking()
+            .Where(item =>
+                inventoryItemIds.Contains(item.InventoryItemId) &&
+                item.Order.BranchId == branchId &&
+                item.Order.Status != OrderStatus.Cancelled &&
+                item.Order.Reservation.RentalStartAt <= DateTimeOffset.UtcNow)
+            .OrderByDescending(item => item.Order.Reservation.RentalStartAt)
+            .ThenByDescending(item => item.OrderId)
+            .Select(item => new LatestRentalCustomerDto(
+                item.InventoryItemId,
+                item.Order.CustomerId,
+                item.OrderId,
+                item.Order.OrderNo,
+                item.Order.Reservation.RentalStartAt,
+                item.Order.Reservation.RentalEndAt,
+                item.Order.Customer.Name,
+                item.Order.Customer.Phone,
+                item.Order.Customer.InstagramHandle,
+                item.Order.Customer.TiktokHandle))
+            .ToListAsync(cancellationToken);
+
+        return completedOrCurrentRentalItems
+            .GroupBy(item => item.InventoryItemId)
+            .Select(group => group.First())
+            .ToList();
+    }
 
     public Task<Product?> GetProductForUpdate(int branchId, int productId, CancellationToken cancellationToken) =>
         context.Products.FirstOrDefaultAsync(product => product.Id == productId && product.BranchId == branchId, cancellationToken);

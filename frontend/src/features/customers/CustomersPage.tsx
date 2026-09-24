@@ -18,10 +18,10 @@ export function CustomersPage() {
       <header className="page-heading">
         <span className="eyebrow">CRM tối giản</span>
         <h1>Khách hàng</h1>
-        <p>Tìm theo tên, số điện thoại hoặc Instagram; mở hồ sơ để xem lịch sử thuê.</p>
+        <p>Tìm theo tên, số điện thoại, Instagram hoặc TikTok; mở hồ sơ để xem lịch sử thuê.</p>
       </header>
       <form className="inline-search" onSubmit={submit}>
-        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="0908…, @ngocanh, tên khách" />
+        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="0908…, @ngocanh, TikTok, tên khách" />
         <button className="button" type="submit">Tìm</button>
       </form>
       <AsyncState loading={customers.loading} error={customers.error} empty={customers.data?.length === 0}>
@@ -31,7 +31,7 @@ export function CustomersPage() {
               <div className="avatar">{customer.name.slice(0, 1).toUpperCase()}</div>
               <div>
                 <h2>{customer.name}</h2>
-                <p>{customer.phone}{customer.instagramHandle ? ` · @${customer.instagramHandle}` : ''}</p>
+                <p>{customer.phone}{customer.instagramHandle ? ` · IG @${customer.instagramHandle}` : ''}{customer.tiktokHandle ? ` · TikTok @${customer.tiktokHandle}` : ''}</p>
                 <small>{customer.completedOrderCount} đơn hoàn tất</small>
               </div>
               <a href={`/customers/${customer.id}`} aria-label={`Mở hồ sơ ${customer.name}`}>›</a>

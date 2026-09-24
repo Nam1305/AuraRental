@@ -14,7 +14,7 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
         <header className="page-heading">
           <span className="eyebrow">Hồ sơ và lịch sử thuê</span>
           <h1>{customer.data?.name}</h1>
-          <p>{customer.data?.phone}{customer.data?.instagramHandle ? ` · @${customer.data.instagramHandle}` : ''}</p>
+          <p>{customer.data?.phone}{customer.data?.instagramHandle ? ` · IG @${customer.data.instagramHandle}` : ''}{customer.data?.tiktokHandle ? ` · TikTok @${customer.data.tiktokHandle}` : ''}</p>
         </header>
       </AsyncState>
 

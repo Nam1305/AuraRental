@@ -17,6 +17,20 @@ export type InventoryItem = {
   id: number
   assetCode: string
   status: 'USABLE' | 'MAINTENANCE' | 'LOST' | 'RETIRED'
+  latestRenter: LatestRenter | null
+}
+
+export type LatestRenter = {
+  inventoryItemId: number
+  customerId: number
+  orderId: number
+  orderNo: string
+  rentalStartAt: string
+  rentalEndAt: string
+  name: string
+  phone: string
+  instagramHandle: string | null
+  tiktokHandle: string | null
 }
 
 export type ProductVariant = {

@@ -58,7 +58,7 @@ Các trường `created_by`, `submitted_by`, `approved_by`, `recorded_by`, `conf
 
 ### 2. `customers` — khách thuê
 
-`id`, `name`, `phone`, `instagram_handle`, `address`: ID, tên, điện thoại, Instagram và địa chỉ mặc định. Một khách có nhiều reservation. Không lưu số/ảnh CCCD.
+`id`, `name`, `phone`, `instagram_handle`, `tiktok_handle`, `address`: ID, tên, điện thoại, Instagram, TikTok và địa chỉ mặc định. Một khách có nhiều reservation. Không lưu số/ảnh CCCD.
 
 ### 3. `products` — mẫu sản phẩm
 

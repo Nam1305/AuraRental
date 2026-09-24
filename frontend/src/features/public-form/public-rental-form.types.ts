@@ -21,6 +21,8 @@ export type SubmitPublicRentalFormRequest = {
   otp: string
   customerName: string
   customerPhone: string
+  instagramHandle: string
+  tiktokHandle: string
   deliveryAddress: string
 }
 

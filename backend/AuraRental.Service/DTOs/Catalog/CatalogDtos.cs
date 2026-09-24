@@ -75,5 +75,21 @@ public sealed record RentalPriceSetDto(
     bool EffectiveForNewReservationsOnly);
 
 public sealed record AddInventoryItemsRequest(IReadOnlyList<InventoryItemInput> Items);
-public sealed record InventoryItemDto(int Id, string AssetCode, string Status);
+public sealed record LatestRentalCustomerDto(
+    int InventoryItemId,
+    int CustomerId,
+    int OrderId,
+    string OrderNo,
+    DateTimeOffset RentalStartAt,
+    DateTimeOffset RentalEndAt,
+    string Name,
+    string Phone,
+    string? InstagramHandle,
+    string? TiktokHandle);
+
+public sealed record InventoryItemDto(
+    int Id,
+    string AssetCode,
+    string Status,
+    LatestRentalCustomerDto? LatestRenter = null);
 public sealed record UpdateInventoryItemRequest(string Status);

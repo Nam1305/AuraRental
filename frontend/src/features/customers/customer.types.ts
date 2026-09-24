@@ -3,6 +3,7 @@ export type CustomerListItem = {
   name: string
   phone: string
   instagramHandle: string | null
+  tiktokHandle: string | null
   address: string | null
   completedOrderCount: number
   lastOrderAt: string | null
@@ -13,6 +14,7 @@ export type Customer = {
   name: string
   phone: string
   instagramHandle: string | null
+  tiktokHandle: string | null
   address: string | null
 }
 

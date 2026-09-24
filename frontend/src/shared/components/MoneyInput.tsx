@@ -29,7 +29,11 @@ export function moneyInWords(value: number) {
   }, []).join(' ') + ' đồng'
 }
 
-export function MoneyField({ label, value, onChange, required = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; disabled?: boolean }) {
+const formatInputMoney = (digits: string) => digits.length > 0
+  ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(Number(digits))
+  : ''
+
+export function MoneyField({ label, value, onChange, required = false, disabled = false, showHelper = true }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; disabled?: boolean; showHelper?: boolean }) {
   const id = useId()
   const digits = value.replace(/\D/g, '')
   const amount = Number(digits)
@@ -40,9 +44,9 @@ export function MoneyField({ label, value, onChange, required = false, disabled 
 
   return <div className="field money-field">
     <label htmlFor={id}>{label}{required ? ' *' : ''}</label>
-    <div className="money-input"><input id={id} required={required} disabled={disabled} inputMode="numeric" value={digits} onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))} placeholder="VD: 1500000" /><span>đ</span></div>
-    {suggestions.length > 0 ? <div className="money-suggestions"><small>Nhập {digits} — chọn nhanh mệnh giá:</small><div>{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={disabled} onClick={() => onChange(String(suggestion))}><strong>{formatMoney(suggestion)}</strong><span>{moneyInWords(suggestion)}</span></button>)}</div></div>
-      : amount > 0 && <small className="money-spellout">{formatMoney(amount)} · {moneyInWords(amount)}</small>}
+    <div className="money-input"><input id={id} required={required} disabled={disabled} inputMode="numeric" value={formatInputMoney(digits)} onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))} placeholder="VD: 1.500.000" /><span>đ</span></div>
+    {showHelper && (suggestions.length > 0 ? <div className="money-suggestions"><small>Nhập {digits} — chọn nhanh mệnh giá:</small><div>{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={disabled} onClick={() => onChange(String(suggestion))}><strong>{formatMoney(suggestion)}</strong><span>{moneyInWords(suggestion)}</span></button>)}</div></div>
+      : amount > 0 && <small className="money-spellout">{formatMoney(amount)} · {moneyInWords(amount)}</small>)}
   </div>
 }
 

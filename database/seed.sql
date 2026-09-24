@@ -28,14 +28,14 @@ INSERT INTO user_branches (user_id, branch_id) VALUES
 ON CONFLICT (user_id, branch_id) DO NOTHING;
 
 -- Customers ------------------------------------------------------------------
-INSERT INTO customers (id, name, phone, instagram_handle, address) VALUES
-(1, 'Nguyễn Ngọc Lan', '+84901234001', '@lan.nguyen', 'Cầu Giấy, Hà Nội'),
-(2, 'Trần Minh Thư', '+84901234002', '@minhthu.daily', 'Hai Bà Trưng, Hà Nội'),
-(3, 'Lê Hoàng Yến', '+84901234003', '@hoangyen.le', 'Ba Đình, Hà Nội'),
-(4, 'Phạm Khánh Linh', '+84901234004', '@khanhlinh.pham', 'Quận 3, TP. Hồ Chí Minh'),
-(5, 'Vũ Gia Hân', '+84901234005', '@giahan.vu', 'Quận 7, TP. Hồ Chí Minh')
+INSERT INTO customers (id, name, phone, instagram_handle, tiktok_handle, address) VALUES
+(1, 'Nguyễn Ngọc Lan', '+84901234001', '@lan.nguyen', '@lan.nguyen', 'Cầu Giấy, Hà Nội'),
+(2, 'Trần Minh Thư', '+84901234002', '@minhthu.daily', '@minhthu.daily', 'Hai Bà Trưng, Hà Nội'),
+(3, 'Lê Hoàng Yến', '+84901234003', '@hoangyen.le', null, 'Ba Đình, Hà Nội'),
+(4, 'Phạm Khánh Linh', '+84901234004', '@khanhlinh.pham', '@khanhlinh', 'Quận 3, TP. Hồ Chí Minh'),
+(5, 'Vũ Gia Hân', '+84901234005', '@giahan.vu', null, 'Quận 7, TP. Hồ Chí Minh')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone,
-instagram_handle = EXCLUDED.instagram_handle, address = EXCLUDED.address;
+instagram_handle = EXCLUDED.instagram_handle, tiktok_handle = EXCLUDED.tiktok_handle, address = EXCLUDED.address;
 
 -- Catalog --------------------------------------------------------------------
 INSERT INTO products (id, branch_id, code, name, category, color, material, description, image_paths, is_active) VALUES

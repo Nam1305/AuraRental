@@ -1,4 +1,5 @@
 using AuraRental.Domain.Entities;
+using AuraRental.Service.DTOs.Catalog;
 
 namespace AuraRental.Service.Interface.Persistence;
 
@@ -13,6 +14,10 @@ public interface ICatalogRepository
         CancellationToken cancellationToken);
 
     Task<Product?> GetProduct(int branchId, int productId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<LatestRentalCustomerDto>> GetLatestRentalCustomers(
+        int branchId,
+        IReadOnlyCollection<int> inventoryItemIds,
+        CancellationToken cancellationToken);
     Task<Product?> GetProductForUpdate(int branchId, int productId, CancellationToken cancellationToken);
     Task<ProductVariant?> GetVariantForUpdate(int variantId, int branchId, CancellationToken cancellationToken);
     Task<InventoryItem?> GetInventoryItemForUpdate(int inventoryItemId, int branchId, CancellationToken cancellationToken);

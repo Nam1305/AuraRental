@@ -36,6 +36,7 @@ CREATE TABLE customers (
     -- Backend stores phone in one normalized format before insert/update.
     phone text NOT NULL UNIQUE,
     instagram_handle text,
+    tiktok_handle text,
     address text
 );
 

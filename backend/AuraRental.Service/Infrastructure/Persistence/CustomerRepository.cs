@@ -22,7 +22,8 @@ public sealed class CustomerRepository(AuraRentalDbContext context) : ICustomerR
             customers = customers.Where(customer =>
                 EF.Functions.ILike(customer.Name, $"%{normalizedQuery}%") ||
                 customer.Phone.Contains(normalizedQuery) ||
-                (customer.InstagramHandle != null && EF.Functions.ILike(customer.InstagramHandle, $"%{normalizedQuery}%")));
+                (customer.InstagramHandle != null && EF.Functions.ILike(customer.InstagramHandle, $"%{normalizedQuery}%")) ||
+                (customer.TiktokHandle != null && EF.Functions.ILike(customer.TiktokHandle, $"%{normalizedQuery}%")));
         }
 
         return await customers
@@ -35,7 +36,7 @@ public sealed class CustomerRepository(AuraRentalDbContext context) : ICustomerR
         context.Customers.FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
 
     public Task<Customer?> GetByPhone(string normalizedPhone, CancellationToken cancellationToken) =>
-        context.Customers.AsNoTracking().FirstOrDefaultAsync(customer => customer.Phone == normalizedPhone, cancellationToken);
+        context.Customers.FirstOrDefaultAsync(customer => customer.Phone == normalizedPhone, cancellationToken);
 
     public Task Add(Customer customer, CancellationToken cancellationToken) =>
         context.Customers.AddAsync(customer, cancellationToken).AsTask();

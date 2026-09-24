@@ -83,9 +83,16 @@ public sealed class PublicRentalFormUseCase(
             {
                 Name = request.CustomerName.Trim(),
                 Phone = phone,
+                InstagramHandle = NormalizeSocialHandle(request.InstagramHandle),
+                TiktokHandle = NormalizeSocialHandle(request.TiktokHandle),
                 Address = request.DeliveryAddress.Trim()
             };
             await customerRepository.Add(customer, cancellationToken);
+        }
+        else
+        {
+            customer.InstagramHandle = NormalizeSocialHandle(request.InstagramHandle) ?? customer.InstagramHandle;
+            customer.TiktokHandle = NormalizeSocialHandle(request.TiktokHandle) ?? customer.TiktokHandle;
         }
 
         var depositRemaining = RentalRules.DepositRemaining(reservation);
@@ -226,4 +233,7 @@ public sealed class PublicRentalFormUseCase(
             throw new ValidationException("INVALID_PHONE", "Số điện thoại Việt Nam không hợp lệ.");
         }
     }
+
+    private static string? NormalizeSocialHandle(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim().TrimStart('@');
 }

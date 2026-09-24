@@ -5,6 +5,7 @@ public sealed record CustomerDto(
     string Name,
     string Phone,
     string? InstagramHandle,
+    string? TiktokHandle,
     string? Address);
 
 public sealed record CustomerListItemDto(
@@ -12,6 +13,7 @@ public sealed record CustomerListItemDto(
     string Name,
     string Phone,
     string? InstagramHandle,
+    string? TiktokHandle,
     string? Address,
     int CompletedOrderCount,
     DateTimeOffset? LastOrderAt);
@@ -20,11 +22,13 @@ public sealed record CreateCustomerRequest(
     string Name,
     string Phone,
     string? InstagramHandle,
+    string? TiktokHandle,
     string? Address);
 
 public sealed record UpdateCustomerRequest(
     string Name,
     string? InstagramHandle,
+    string? TiktokHandle,
     string? Address);
 
 public sealed record CustomerOrderItemDto(string ProductName, string Size, string AssetCode);

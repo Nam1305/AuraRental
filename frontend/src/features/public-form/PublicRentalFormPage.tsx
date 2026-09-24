@@ -19,6 +19,8 @@ export function PublicRentalFormPage() {
   )
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
+  const [instagramHandle, setInstagramHandle] = useState('')
+  const [tiktokHandle, setTiktokHandle] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [otp, setOtp] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -35,6 +37,8 @@ export function PublicRentalFormPage() {
       const result = await submitPublicRentalForm(token, {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
+        instagramHandle: instagramHandle.trim(),
+        tiktokHandle: tiktokHandle.trim(),
         deliveryAddress: deliveryAddress.trim(),
         otp: otp.trim(),
       })
@@ -99,6 +103,14 @@ export function PublicRentalFormPage() {
               <label className="field">
                 <span>Số điện thoại</span>
                 <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} inputMode="tel" autoComplete="tel" required />
+              </label>
+              <label className="field">
+                <span>Tài khoản Instagram <small>(không bắt buộc)</small></span>
+                <input value={instagramHandle} onChange={(event) => setInstagramHandle(event.target.value)} placeholder="@ten_tai_khoan" autoComplete="off" />
+              </label>
+              <label className="field">
+                <span>Tài khoản TikTok <small>(không bắt buộc)</small></span>
+                <input value={tiktokHandle} onChange={(event) => setTiktokHandle(event.target.value)} placeholder="@ten_tai_khoan" autoComplete="off" />
               </label>
               <label className="field">
                 <span>Địa chỉ giao / nhận đồ</span>

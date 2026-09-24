@@ -25,6 +25,7 @@ public sealed class CustomerUseCase(
             customer.Name,
             customer.Phone,
             customer.InstagramHandle,
+            customer.TiktokHandle,
             customer.Address,
             customer.Orders.Count(order => order.Status == OrderStatus.Completed),
             customer.Orders.Count == 0 ? null : customer.Orders.Max(order => order.CreatedAt))).ToList();
@@ -50,6 +51,7 @@ public sealed class CustomerUseCase(
             Name = request.Name.Trim(),
             Phone = phone,
             InstagramHandle = NormalizeInstagram(request.InstagramHandle),
+            TiktokHandle = NormalizeSocialHandle(request.TiktokHandle),
             Address = request.Address?.Trim()
         };
 
@@ -67,6 +69,7 @@ public sealed class CustomerUseCase(
         var customer = await GetRequired(customerId, cancellationToken);
         customer.Name = request.Name.Trim();
         customer.InstagramHandle = NormalizeInstagram(request.InstagramHandle);
+        customer.TiktokHandle = NormalizeSocialHandle(request.TiktokHandle);
         customer.Address = request.Address?.Trim();
         await customerRepository.SaveChanges(cancellationToken);
         return ToDto(customer);
@@ -110,6 +113,7 @@ public sealed class CustomerUseCase(
         customer.Name,
         customer.Phone,
         customer.InstagramHandle,
+        customer.TiktokHandle,
         customer.Address);
 
     private static string NormalizePhone(string phone)
@@ -125,6 +129,9 @@ public sealed class CustomerUseCase(
     }
 
     private static string? NormalizeInstagram(string? value) =>
+        NormalizeSocialHandle(value);
+
+    private static string? NormalizeSocialHandle(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim().TrimStart('@');
 
     private static void ValidateName(string name)
