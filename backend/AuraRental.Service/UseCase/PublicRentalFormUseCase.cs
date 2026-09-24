@@ -88,6 +88,11 @@ public sealed class PublicRentalFormUseCase(
                 Address = request.DeliveryAddress.Trim()
             };
             await customerRepository.Add(customer, cancellationToken);
+            // PostgreSQL assigns the identity key on save. Persist the new customer
+            // before using its ID as the required foreign key on the new order.
+            // This remains atomic because the surrounding reservation transaction
+            // has not committed yet.
+            await unitOfWork.SaveChanges(cancellationToken);
         }
         else
         {
