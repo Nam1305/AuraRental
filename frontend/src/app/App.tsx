@@ -1,4 +1,5 @@
 import { LoginPage } from '@/features/auth/LoginPage'
+import { PublicRentalFormPage } from '@/features/public-form/PublicRentalFormPage'
 import { SessionProvider, useSession } from '@/features/session/SessionProvider'
 import { AppRouter } from './AppRouter'
 
@@ -13,5 +14,8 @@ function SessionBoundary() {
 }
 
 export function App() {
+  const pathname = window.location.pathname.replace(/\/$/, '') || '/'
+  if (pathname.startsWith('/r/')) return <PublicRentalFormPage />
+
   return <SessionProvider><SessionBoundary /></SessionProvider>
 }
